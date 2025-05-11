@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veo 2 Testing</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .debug-panel {
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        #debugLog {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .settings-row label {
+            margin-right: 10px;
+            width: 120px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        .action-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .primary-btn {
+            background-color: #4285f4;
+            color: white;
+        }
+        .secondary-btn {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            border: 1px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .download-btn {
+            background-color: #34a853;
+            color: white;
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Veo 2 Video Generation Test</h1>
+        
+        <!-- Video Generation Interface -->
+        <div id="videoGenInterface">
+            <div class="input-group">
+                <label for="videoPrompt">Describe your video:</label>
+                <textarea id="videoPrompt" placeholder="A cat playing piano in a jazz club, cinematic lighting" rows="3"></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label>Input Image (optional):</label>
+                <div class="image-upload-container">
+                    <button id="uploadImageBtn" class="secondary-btn">Upload Image</button>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+                    <div id="imagePreview" class="image-preview"></div>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label>Video Settings:</label>
+                <div class="settings-row">
+                    <label for="aspectRatio">Aspect Ratio:</label>
+                    <select id="aspectRatio">
+                        <option value="16:9">16:9 (Landscape)</option>
+                        <option value="9:16">9:16 (Portrait)</option>
+                    </select>
+                </div>
+                
+                <div class="settings-row">
+                    <label for="videoDuration">Duration:</label>
+                    <select id="videoDuration">
+                        <option value="5">5 seconds</option>
+                        <option value="6">6 seconds</option>
+                        <option value="7">7 seconds</option>
+                        <option value="8">8 seconds</option>
+                    </select>
+                </div>
+                
+                <div class="settings-row">
+                    <label for="enhancePrompt">Enhance Prompt:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enhancePrompt" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="action-row">
+                <button id="generateVideoBtn" class="primary-btn">Generate Video</button>
+                <button id="clearFormBtn" class="secondary-btn">Clear Form</button>
+            </div>
+            
+            <div id="videoResult" class="result-container" style="display: none;">
+                <h3>Generated Video:</h3>
+                <div id="videoPlayer" class="video-player"></div>
+                <button id="downloadVideoBtn" class="download-btn">Download Video</button>
+            </div>
+        </div>
+        
+        <!-- Debug Panel -->
+        <div class="debug-panel">
+            <h3>Debug Information</h3>
+            <div id="debugLog">Waiting for actions...</div>
+        </div>
+    </div>
+
+    <script>
+        // Debug logging function
+        function log(message) {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.innerHTML += `[${timestamp}] ${message}\n`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(message);
+        }
+
+        // Initialize elements
+        let uploadImageBtn = document.getElementById('uploadImageBtn');
+        let imageUpload = document.getElementById('imageUpload');
+        let imagePreview = document.getElementById('imagePreview');
+        let generateVideoBtn = document.getElementById('generateVideoBtn');
+        let clearFormBtn = document.getElementById('clearFormBtn');
+        let videoResult = document.getElementById('videoResult');
+        let videoPlayer = document.getElementById('videoPlayer');
+        let downloadVideoBtn = document.getElementById('downloadVideoBtn');
+
+        log('Test page loaded, initializing elements...');
+        
+        // Check that all elements are found
+        [
+            { name: 'uploadImageBtn', el: uploadImageBtn },
+            { name: 'imageUpload', el: imageUpload },
+            { name: 'imagePreview', el: imagePreview },
+            { name: 'generateVideoBtn', el: generateVideoBtn },
+            { name: 'clearFormBtn', el: clearFormBtn },
+            { name: 'videoResult', el: videoResult },
+            { name: 'videoPlayer', el: videoPlayer },
+            { name: 'downloadVideoBtn', el: downloadVideoBtn }
+        ].forEach(item => {
+            if (!item.el) {
+                log(`❌ ERROR: Element ${item.name} not found!`);
+            }
+        });
+
+        // Add event listeners
+        if (uploadImageBtn && imageUpload) {
+            uploadImageBtn.addEventListener('click', () => {
+                log('Upload image button clicked');
+                imageUpload.click();
+            });
+            
+            imageUpload.addEventListener('change', handleImageUpload);
+        }
+        
+        if (clearFormBtn) {
+            clearFormBtn.addEventListener('click', () => {
+                log('Clearing form');
+                document.getElementById('videoPrompt').value = '';
+                imagePreview.innerHTML = '';
+                document.getElementById('aspectRatio').value = '16:9';
+                document.getElementById('videoDuration').value = '5';
+                document.getElementById('enhancePrompt').checked = true;
+                videoResult.style.display = 'none';
+            });
+        }
+        
+        if (generateVideoBtn) {
+            generateVideoBtn.addEventListener('click', handleVideoGeneration);
+            log('Generate video button event listener added');
+        }
+        
+        if (downloadVideoBtn) {
+            downloadVideoBtn.addEventListener('click', handleVideoDownload);
+            log('Download video button event listener added');
+        }
+
+        // Handle image upload
+        function handleImageUpload(event) {
+            log('Image upload triggered');
+            const file = event.target.files[0];
+            if (!file) {
+                log('No file selected');
+                return;
+            }
+            
+            // Check if file is an image
+            if (!file.type.startsWith('image/')) {
+                log('❌ ERROR: File is not an image. Type: ' + file.type);
+                alert('Please upload an image file');
+                return;
+            }
+            
+            log(`Processing image: ${file.name} (${file.type}, ${Math.round(file.size/1024)} KB)`);
+            
+            // Create a preview of the image
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                imagePreview.appendChild(img);
+                log('Image preview created');
+            };
+            reader.onerror = () => {
+                log('❌ ERROR reading file: ' + reader.error);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle video generation
+        function handleVideoGeneration() {
+            log('🔍 Starting video generation process');
+            const videoPrompt = document.getElementById('videoPrompt').value.trim();
+            
+            // Get settings values
+            const aspectRatio = document.getElementById('aspectRatio').value;
+            const videoDuration = document.getElementById('videoDuration').value;
+            const enhancePrompt = document.getElementById('enhancePrompt').checked;
+            
+            // Log the settings being used
+            log('🎬 Video Generation Settings:');
+            log(`- Prompt: ${videoPrompt}`);
+            log(`- Aspect Ratio: ${aspectRatio}`);
+            log(`- Duration: ${videoDuration} seconds`);
+            log(`- Enhance Prompt: ${enhancePrompt ? 'Yes' : 'No'}`);
+            log(`- Image Uploaded: ${!!imagePreview.querySelector('img')}`);
+            
+            // Validate input
+            if (!videoPrompt) {
+                log('❌ ERROR: No prompt provided');
+                alert('Please enter a description for your video');
+                return;
+            }
+            
+            // Show loading state
+            generateVideoBtn.disabled = true;
+            generateVideoBtn.textContent = 'Generating...';
+            log('Generate button disabled, showing loading state');
+            
+            log('⚠️ NOTE: This is currently using a mock implementation');
+            log('⚠️ No actual API call to Veo 2 is being made');
+            
+            // Mock API call timing
+            log('Simulating API delay (3 seconds)...');
+            
+            // In a real implementation, this would call the Veo 2 API
+            // For now, we'll simulate a delay and then show a placeholder video
+            setTimeout(() => {
+                // Reset button state
+                generateVideoBtn.disabled = false;
+                generateVideoBtn.textContent = 'Generate Video';
+                log('Generate button re-enabled');
+                
+                // Show result
+                videoResult.style.display = 'block';
+                log('🎥 Displaying mock video result');
+                
+                // Create a placeholder video player
+                videoPlayer.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 20px; background-color: #f5f5f5; border-radius: 4px;">
+                        <p>Video would be generated here using:</p>
+                        <ul style="text-align: left; margin-top: 1rem;">
+                            <li>Prompt: ${videoPrompt}</li>
+                            <li>Aspect Ratio: ${aspectRatio}</li>
+                            <li>Duration: ${videoDuration} seconds</li>
+                            <li>Enhance Prompt: ${enhancePrompt ? 'Yes' : 'No'}</li>
+                        </ul>
+                        <p style="margin-top: 1rem;">Using Google's Veo 2 model</p>
+                    </div>
+                `;
+                
+                // Scroll to the result
+                videoResult.scrollIntoView({ behavior: 'smooth' });
+                log('Mock video generation complete');
+            }, 3000);
+        }
+
+        // Handle video download
+        function handleVideoDownload() {
+            log('🔽 Video download requested - mock functionality only');
+            alert('In a real implementation, this would download the generated video.');
+        }
+
+        // Log initialization complete
+        log('Initialization complete. Test page is ready.');
+    </script>
+</body>
+</html>

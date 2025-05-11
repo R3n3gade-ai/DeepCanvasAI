@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creation Studio - Gemini Live</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #fff;
+        }
+        
+        .studio-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: #1e1e1e;
+            border-bottom: 1px solid #333;
+            position: relative;
+            padding: 0 24px;
+            justify-content: center;
+        }
+        
+        .back-button {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #8ab4f8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .back-button:hover {
+            background-color: rgba(138, 180, 248, 0.1);
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            color: #aaa;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .tab:hover {
+            color: #fff;
+        }
+        
+        .tab.active {
+            color: #fff;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #8ab4f8;
+        }
+        
+        .content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .editor-panel {
+            width: 300px;
+            background-color: #1a1a1a;
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        .result-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #121212;
+        }
+        
+        .subtabs {
+            display: flex;
+            margin-bottom: 16px;
+        }
+        
+        .subtab {
+            padding: 8px 16px;
+            cursor: pointer;
+            color: #aaa;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            background-color: transparent;
+            border: none;
+            font-size: 14px;
+        }
+        
+        .subtab:hover {
+            color: #fff;
+        }
+        
+        .subtab.active {
+            color: #fff;
+            background-color: #333;
+            border-radius: 4px;
+        }
+        
+        .prompt-area {
+            width: 100%;
+            min-height: 120px;
+            background-color: #232323;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            padding: 12px;
+            resize: vertical;
+            margin-bottom: 16px;
+            font-family: inherit;
+        }
+        
+        .section {
+            margin-bottom: 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .section-title {
+            font-weight: 500;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-content {
+            margin-top: 8px;
+        }
+        
+        .input-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .input-label {
+            flex: 1;
+            font-size: 14px;
+            color: #bbb;
+        }
+        
+        .input-field {
+            flex: 1;
+            background-color: #232323;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            padding: 6px 8px;
+        }
+        
+        .aspect-ratio-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .aspect-option {
+            text-align: center;
+            padding: 6px;
+            background-color: #232323;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .aspect-option:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .aspect-option.selected {
+            background-color: #2c2c7a;
+            border-color: #4a4ad7;
+        }
+        
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .size-input {
+            width: 70px;
+            background-color: #232323;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #fff;
+            padding: 6px 8px;
+            text-align: center;
+        }
+        
+        .lock-aspect {
+            padding: 6px;
+            background: none;
+            border: none;
+            color: #8ab4f8;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .generate-button {
+            width: 100%;
+            padding: 12px;
+            background-color: #8ab4f8;
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .generate-button:hover {
+            background-color: #9dc1ff;
+        }
+        
+        .reference-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background-color: #232323;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .reference-button:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .char-count {
+            color: #999;
+            font-size: 12px;
+            text-align: right;
+        }
+        
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            padding: 16px;
+        }
+        
+        .generated-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            background-color: #1a1a1a;
+        }
+        
+        .generated-item:hover {
+            transform: scale(1.02);
+        }
+        
+        .generated-image {
+            width: 100%;
+            display: block;
+        }
+        
+        .generated-video {
+            width: 100%;
+            display: block;
+        }
+        
+        .item-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+        }
+        
+        .item-action {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #8ab4f8;
+            cursor: pointer;
+        }
+        
+        .slider-value {
+            width: 30px;
+            text-align: right;
+            color: #ccc;
+        }
+        
+        select.input-field {
+            appearance: none;
+            padding-right: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' viewBox='0 0 8 4'%3E%3Cpath fill='%23fff' d='M0 0h8L4 4z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Video tab specific styles */
+        .video-options {
+            margin-top: 8px;
+        }
+        
+        .upload-preview {
+            margin-top: 10px;
+            border: 1px dashed #444;
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 150px;
+            display: none;
+            margin: 10px auto 0;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="studio-container">
+        <!-- Main Tabs -->
+        <div class="tabs">
+            <button class="back-button" onclick="window.location.href='index.html'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Return to Dashboard
+            </button>
+            <div class="tab active" data-tab="studio">Studio</div>
+            <div class="tab" data-tab="editor">Editor</div>
+        </div>
+        
+        <!-- Content Area -->
+        <div class="content">
+            <!-- Studio Tab Content -->
+            <div id="studio-content" class="tab-content active">
+                <!-- Sidebar/Editor Panel -->
+                <div class="editor-panel">
+                    <!-- Image/Video Subtabs -->
+                    <div class="subtabs">
+                        <button class="subtab active" data-subtab="image">Generate Images</button>
+                        <button class="subtab" data-subtab="video">Generate Videos</button>
+                    </div>
+                    
+                    <!-- Image Generation Controls -->
+                    <div id="image-controls" class="subtab-content">
+                        <textarea class="prompt-area" placeholder="Describe the image you want to generate..." id="image-prompt"></textarea>
+                        <div class="char-count"><span id="image-char-count">0</span>/800</div>
+                        
+                        <button class="reference-button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 16L8.586 11.414C9.367 10.633 10.632 10.633 11.414 11.414L16 16M14 14L15.586 12.414C16.367 11.633 17.632 11.633 18.414 12.414L20 14M14 8H14.01M6 20H18C19.1 20 20 19.1 20 18V6C20 4.9 19.1 4 18 4H6C4.9 4 4 4.9 4 6V18C4 19.1 4.9 20 6 20Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Reference
+                        </button>
+                        
+                        <div class="section">
+                            <div class="section-header">
+                                <div class="section-title">Model</div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 9L12 16L5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <select class="input-field" id="image-model">
+                                    <option value="dreamina">Dreamina v1.4</option>
+                                    <option value="imagen">Imagen 2</option>
+                                    <option value="sdxl">SDXL</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-header">
+                                <div class="section-title">Quality</div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 9L12 16L5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <div class="slider-container">
+                                    <input type="range" class="slider" id="image-quality" min="1" max="10" value="7">
+                                    <div class="slider-value" id="image-quality-value">7</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-header">
+                                <div class="section-title">Aspect ratio</div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 9L12 16L5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <div class="aspect-ratio-grid">
+                                    <div class="aspect-option" data-ratio="21:9">21:9</div>
+                                    <div class="aspect-option" data-ratio="16:9">16:9</div>
+                                    <div class="aspect-option" data-ratio="3:2">3:2</div>
+                                    <div class="aspect-option" data-ratio="4:3">4:3</div>
+                                    <div class="aspect-option selected" data-ratio="1:1">1:1</div>
+                                    <div class="aspect-option" data-ratio="3:4">3:4</div>
+                                    <div class="aspect-option" data-ratio="2:3">2:3</div>
+                                    <div class="aspect-option" data-ratio="9:16">9:16</div>
+                                    <div class="aspect-option" data-ratio="9:21">9:21</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-header">
+                                <div class="section-title">Size</div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 9L12 16L5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <div class="size-inputs">
+                                    <span class="input-label">W</span>
+                                    <input type="number" class="size-input" id="image-width" value="768">
+                                    <button class="lock-aspect" id="lock-aspect">🔗</button>
+                                    <span class="input-label">H</span>
+                                    <input type="number" class="size-input" id="image-height" value="768">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="generate-button" id="generate-image-btn">
+                            Generate
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Video Generation Controls -->
+                    <div id="video-controls" class="subtab-content hidden">
+                        <textarea class="prompt-area" placeholder="Describe the video you want to generate..." id="video-prompt"></textarea>
+                        <div class="char-count"><span id="video-char-count">0</span>/800</div>
+                        
+                        <div class="upload-preview" id="video-image-upload">
+                            <div>Upload an image (optional)</div>
+                            <div style="font-size: 12px; color: #999; margin-top: 5px;">Drag & drop or click to upload</div>
+                            <img id="video-preview-image" class="preview-image">
+                            <input type="file" id="video-image-input" style="display: none;" accept="image/*">
+                        </div>
+                        
+                        <div class="section">
+                            <div class="section-header">
+                                <div class="section-title">Video Settings</div>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 9L12 16L5 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="section-content">
+                                <div class="input-row">
+                                    <span class="input-label">Aspect Ratio</span>
+                                    <select class="input-field" id="video-aspect-ratio">
+                                        <option value="16:9">16:9 (Landscape)</option>
+                                        <option value="9:16">9:16 (Portrait)</option>
+                                        <option value="1:1">1:1 (Square)</option>
+                                    </select>
+                                </div>
+                                <div class="input-row">
+                                    <span class="input-label">Duration</span>
+                                    <select class="input-field" id="video-duration">
+                                        <option value="5">5 seconds</option>
+                                        <option value="6">6 seconds</option>
+                                        <option value="7">7 seconds</option>
+                                        <option value="8">8 seconds</option>
+                                    </select>
+                                </div>
+                                <div class="input-row">
+                                    <span class="input-label">Enhance Prompt</span>
+                                    <label class="toggle-switch" style="margin-left: auto;">
+                                        <input type="checkbox" id="video-enhance-prompt" checked>
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button class="generate-button" id="generate-video-btn">
+                            Generate
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div class="result-panel">
+                    <!-- Image Results -->
+                    <div id="image-results" class="subtab-content">
+                        <div class="empty-state" id="image-empty-state">
+                            <div class="empty-icon">🖼️</div>
+                            <h3>No images generated yet</h3>
+                            <p>Fill in the prompt and settings, then click generate to create images</p>
+                        </div>
+                        <div class="image-grid" id="image-grid"></div>
+                    </div>
+                    
+                    <!-- Video Results -->
+                    <div id="video-results" class="subtab-content hidden">
+                        <div class="empty-state" id="video-empty-state">
+                            <div class="empty-icon">🎬</div>
+                            <h3>No videos generated yet</h3>
+                            <p>Fill in the prompt and settings, then click generate to create videos</p>
+                        </div>
+                        <div class="image-grid" id="video-grid"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editor Tab Content -->
+            <div id="editor-content" class="tab-content hidden">
+                <div id="video-editor-container" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+                    <iframe id="video-editor-iframe" src="http://localhost:5173" style="flex: 1; width: 100%; height: 100%; border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/init-veo2.js"></script>
+    <script type="module">
+        import { veo2Service } from './js/video/veo2-service.js';
+        import videoEditorIntegration from './js/integrations/react-video-editor-integration.js';
+        
+        // DOM Elements
+        const tabs = document.querySelectorAll('.tab');
+        const subtabs = document.querySelectorAll('.subtab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const subtabContents = document.querySelectorAll('.subtab-content');
+        const aspectOptions = document.querySelectorAll('.aspect-option');
+        const imagePrompt = document.getElementById('image-prompt');
+        const videoPrompt = document.getElementById('video-prompt');
+        const imageCharCount = document.getElementById('image-char-count');
+        const videoCharCount = document.getElementById('video-char-count');
+        const imageQualitySlider = document.getElementById('image-quality');
+        const imageQualityValue = document.getElementById('image-quality-value');
+        const generateImageBtn = document.getElementById('generate-image-btn');
+        const generateVideoBtn = document.getElementById('generate-video-btn');
+        const imageGrid = document.getElementById('image-grid');
+        const videoGrid = document.getElementById('video-grid');
+        const imageEmptyState = document.getElementById('image-empty-state');
+        const videoEmptyState = document.getElementById('video-empty-state');
+        const videoImageUpload = document.getElementById('video-image-upload');
+        const videoImageInput = document.getElementById('video-image-input');
+        const videoPreviewImage = document.getElementById('video-preview-image');
+        
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabName = tab.getAttribute('data-tab');
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                    content.classList.remove('active');
+                });
+                
+                const activeContent = document.getElementById(`${tabName}-content`);
+                activeContent.classList.remove('hidden');
+                activeContent.classList.add('active');
+            });
+        });
+        
+        // Subtab switching
+        subtabs.forEach(subtab => {
+            subtab.addEventListener('click', () => {
+                subtabs.forEach(t => t.classList.remove('active'));
+                subtab.classList.add('active');
+                
+                const subtabName = subtab.getAttribute('data-subtab');
+                
+                // Hide all subtab contents
+                subtabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                // Show the active subtab controls and results
+                document.getElementById(`${subtabName}-controls`).classList.remove('hidden');
+                document.getElementById(`${subtabName}-results`).classList.remove('hidden');
+            });
+        });
+        
+        // Aspect ratio selection
+        aspectOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                aspectOptions.forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                // Update size inputs based on selected aspect ratio
+                updateSizeFromAspectRatio(option.getAttribute('data-ratio'));
+            });
+        });
+        
+        // Character count for prompts
+        imagePrompt.addEventListener('input', () => {
+            imageCharCount.textContent = imagePrompt.value.length;
+        });
+        
+        videoPrompt.addEventListener('input', () => {
+            videoCharCount.textContent = videoPrompt.value.length;
+        });
+        
+        // Quality slider value update
+        imageQualitySlider.addEventListener('input', () => {
+            imageQualityValue.textContent = imageQualitySlider.value;
+        });
+        
+        // Image upload for video generation
+        videoImageUpload.addEventListener('click', () => {
+            videoImageInput.click();
+        });
+        
+        videoImageInput.addEventListener('change', () => {
+            const file = videoImageInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    videoPreviewImage.src = e.target.result;
+                    videoPreviewImage.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Generate image button
+        generateImageBtn.addEventListener('click', () => {
+            const prompt = imagePrompt.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt to generate an image');
+                return;
+            }
+            
+            // Here you would call your image generation API
+            // For demo purposes, we'll just add a placeholder
+            addImageToGrid(prompt);
+        });
+        
+        // Generate video button
+        generateVideoBtn.addEventListener('click', async () => {
+            const prompt = videoPrompt.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt to generate a video');
+                return;
+            }
+            
+            // Show loading state
+            generateVideoBtn.disabled = true;
+            generateVideoBtn.textContent = 'Generating...';
+            
+            try {
+                // Get image data if available
+                let imageBase64 = null;
+                if (videoPreviewImage.style.display !== 'none' && videoPreviewImage.src) {
+                    const src = videoPreviewImage.src;
+                    if (src.startsWith('data:image')) {
+                        imageBase64 = src.split(',')[1]; // Remove the data:image/jpeg;base64, part
+                    }
+                }
+                
+                // Prepare generation options
+                const options = {
+                    prompt: prompt,
+                    aspectRatio: document.getElementById('video-aspect-ratio').value,
+                    duration: parseInt(document.getElementById('video-duration').value),
+                    enhancePrompt: document.getElementById('video-enhance-prompt').checked,
+                    imageBase64: imageBase64
+                };
+                
+                // Call the Veo 2 service to generate the video
+                const result = await veo2Service.generateVideo(options);
+                
+                // Add the video to the grid
+                addVideoToGrid(prompt, result.video.url);
+                
+            } catch (error) {
+                console.error('❌ Error generating video:', error);
+                alert(`Error generating video: ${error.message}`);
+            } finally {
+                // Reset button state
+                generateVideoBtn.disabled = false;
+                generateVideoBtn.textContent = 'Generate';
+            }
+        });
+        
+        // Helper function to update width/height based on aspect ratio
+        function updateSizeFromAspectRatio(ratio) {
+            const [width, height] = ratio.split(':').map(Number);
+            const widthInput = document.getElementById('image-width');
+            const heightInput = document.getElementById('image-height');
+            
+            // Maintain total pixels approximately the same
+            const targetPixels = 768 * 768;
+            const scale = Math.sqrt(targetPixels / (width * height));
+            
+            widthInput.value = Math.round(width * scale);
+            heightInput.value = Math.round(height * scale);
+        }
+        
+        // Add a generated image to the grid
+        function addImageToGrid(prompt) {
+            // Hide empty state if this is the first image
+            imageEmptyState.style.display = 'none';
+            
+            const imageItem = document.createElement('div');
+            imageItem.className = 'generated-item';
+            
+            // For demo, use a placeholder image
+            const aspectRatio = document.querySelector('.aspect-option.selected').getAttribute('data-ratio');
+            const [width, height] = aspectRatio.split(':').map(Number);
+            
+            // Use a placeholder service that respects aspect ratio
+            const imageUrl = `https://picsum.photos/${width * 100}/${height * 100}?random=${Date.now()}`;
+            
+            imageItem.innerHTML = `
+                <img src="${imageUrl}" class="generated-image" alt="${prompt}">
+                <div class="item-actions">
+                    <button class="item-action download-action">Download</button>
+                    <button class="item-action share-action">Share</button>
+                </div>
+            `;
+            
+            imageGrid.prepend(imageItem);
+        }
+        
+        // Add a generated video to the grid
+        function addVideoToGrid(prompt, videoUrl) {
+            // Hide empty state if this is the first video
+            videoEmptyState.style.display = 'none';
+            
+            const videoItem = document.createElement('div');
+            videoItem.className = 'generated-item';
+            
+            if (videoUrl) {
+                videoItem.innerHTML = `
+                    <video controls class="generated-video">
+                        <source src="${videoUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="item-actions">
+                        <button class="item-action download-action">Download</button>
+                        <button class="item-action share-action">Share</button>
+                    </div>
+                `;
+            } else {
+                // If no URL is provided, show an error message
+                videoItem.innerHTML = `
+                    <div style="padding: 20px; text-align: center; background-color: #333;">
+                        <p>Video generation failed or no URL returned</p>
+                        <p style="font-size: 12px; color: #999;">Prompt: ${prompt}</p>
+                    </div>
+                `;
+            }
+            
+            videoGrid.prepend(videoItem);
+        }
+        
+        // Add sample images to demonstrate the layout
+        function addSampleImages() {
+            // Only add samples if there are no real images
+            if (imageGrid.children.length === 0) {
+                imageEmptyState.style.display = 'none';
+                
+                // Add 8 sample images with different prompts
+                const samplePrompts = [
+                    "Portrait of a woman with cloud-like hair, coral and blue tones, oil painting",
+                    "Astronaut in a futuristic space station with neon lights",
+                    "Surreal landscape with floating islands and waterfalls",
+                    "Cat playing piano in a jazz club with moody lighting",
+                    "Abstract geometric shapes in vibrant colors on a dark background",
+                    "Fantasy forest with glowing mushrooms and magical creatures",
+                    "Cyberpunk city street at night with rain and neon signs",
+                    "Ocean waves at sunset with dramatic clouds"
+                ];
+                
+                samplePrompts.forEach((prompt, index) => {
+                    const imageItem = document.createElement('div');
+                    imageItem.className = 'generated-item';
+                    
+                    // Use different aspect ratios for variety
+                    const aspectRatios = ['1:1', '16:9', '4:3', '3:4', '1:1', '16:9', '3:2', '1:1'];
+                    const aspect = aspectRatios[index % aspectRatios.length];
+                    const [width, height] = aspect.split(':').map(Number);
+                    
+                    // Use a unique seed for each image
+                    const imageUrl = `https://picsum.photos/${width * 200}/${height * 200}?random=${index}`;
+                    
+                    imageItem.innerHTML = `
+                        <img src="${imageUrl}" class="generated-image" alt="${prompt}">
+                        <div class="item-actions">
+                            <button class="item-action download-action">Download</button>
+                            <button class="item-action share-action">Share</button>
+                        </div>
+                    `;
+                    
+                    imageGrid.appendChild(imageItem);
+                });
+                
+                // Add a sample video as well
+                videoEmptyState.style.display = 'none';
+                const videoItem = document.createElement('div');
+                videoItem.className = 'generated-item';
+                videoItem.innerHTML = `
+                    <video controls class="generated-video">
+                        <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div class="item-actions">
+                        <button class="item-action download-action">Download</button>
+                        <button class="item-action share-action">Share</button>
+                    </div>
+                `;
+                videoGrid.appendChild(videoItem);
+            }
+        }
+        
+        // Add sample images on page load
+        document.addEventListener('DOMContentLoaded', addSampleImages);
+        // Also call immediately in case DOMContentLoaded already fired
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            addSampleImages();
+        }
+        
+        // Initialize React Video Editor when the Editor tab is clicked
+        tabs.forEach(tab => {
+            if (tab.getAttribute('data-tab') === 'editor') {
+                tab.addEventListener('click', async () => {
+                    try {
+                        // Initialize if not already done
+                        if (!videoEditorIntegration.isInitialized) {
+                            const initialized = await videoEditorIntegration.initialize();
+                            if (!initialized) {
+                                throw new Error('Failed to initialize video editor');
+                            }
+                        }
+                        
+                        // Update the iframe source if needed
+                        const iframe = document.getElementById('video-editor-iframe');
+                        if (iframe.src !== videoEditorIntegration.editorUrl) {
+                            iframe.src = videoEditorIntegration.editorUrl;
+                        }
+                    } catch (error) {
+                        console.error('Error initializing video editor:', error);
+                        alert(`Could not initialize video editor: ${error.message}`);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

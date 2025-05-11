@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Second-Me Integration Demo</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .demo-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .demo-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .command-input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .action-button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        .action-button:hover {
+            background-color: #3367d6;
+        }
+        
+        .memory-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .memory-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .memory-timestamp {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .video-container {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        
+        .video-container video {
+            max-width: 100%;
+            border-radius: 4px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-enabled {
+            background-color: #34A853;
+        }
+        
+        .status-disabled {
+            background-color: #EA4335;
+        }
+        
+        .response-display {
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Second-Me Integration Demo</h1>
+    </header>
+    
+    <div class="demo-container">
+        <div class="demo-section">
+            <h2>Integration Status</h2>
+            <div id="status-display">
+                <p><span class="status-indicator" id="second-me-status"></span> Second-Me Integration: <span id="second-me-text">Loading...</span></p>
+                <p><span class="status-indicator" id="veo2-status"></span> Veo 2 API: <span id="veo2-text">Loading...</span></p>
+            </div>
+            <button id="init-button" class="action-button">Initialize Integration</button>
+            <button id="settings-button" class="action-button">Open Settings</button>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Video Generation with Second-Me</h2>
+            <p>Use the Second-Me integration to generate videos with Veo 2:</p>
+            <input type="text" id="video-prompt" class="command-input" placeholder="Enter video prompt (e.g., 'A peaceful lake with mountains in the background')">
+            <label>
+                <select id="aspect-ratio">
+                    <option value="16:9">16:9 (Landscape)</option>
+                    <option value="9:16">9:16 (Portrait)</option>
+                    <option value="1:1">1:1 (Square)</option>
+                </select>
+            </label>
+            <label>
+                Duration: 
+                <select id="duration">
+                    <option value="3">3 seconds</option>
+                    <option value="5">5 seconds</option>
+                    <option value="8">8 seconds</option>
+                </select>
+            </label>
+            <label>
+                <input type="checkbox" id="enhance-prompt" checked> Enhance prompt
+            </label>
+            <div>
+                <button id="generate-button" class="action-button">Generate Video</button>
+            </div>
+            
+            <div id="generation-result" class="video-container"></div>
+            <div id="response-display" class="response-display"></div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Memory Storage &amp; Retrieval</h2>
+            <div>
+                <button id="retrieve-history-button" class="action-button">Retrieve Video History</button>
+            </div>
+            <ul id="memory-list" class="memory-list"></ul>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { secondMeIntegration } from './js/integrations/second-me-integration.js';
+        import { veo2Service } from './js/video/veo2-service.js';
+        import settingsManager from './js/settings/settings-manager.js';
+        import { getSecondMeEnabled } from './js/config/config.js';
+        
+        // DOM Elements
+        const secondMeStatusIndicator = document.getElementById('second-me-status');
+        const secondMeStatusText = document.getElementById('second-me-text');
+        const veo2StatusIndicator = document.getElementById('veo2-status');
+        const veo2StatusText = document.getElementById('veo2-text');
+        const initButton = document.getElementById('init-button');
+        const settingsButton = document.getElementById('settings-button');
+        const videoPromptInput = document.getElementById('video-prompt');
+        const aspectRatioSelect = document.getElementById('aspect-ratio');
+        const durationSelect = document.getElementById('duration');
+        const enhancePromptCheckbox = document.getElementById('enhance-prompt');
+        const generateButton = document.getElementById('generate-button');
+        const generationResult = document.getElementById('generation-result');
+        const responseDisplay = document.getElementById('response-display');
+        const retrieveHistoryButton = document.getElementById('retrieve-history-button');
+        const memoryList = document.getElementById('memory-list');
+        
+        // Initialize the UI
+        async function initUI() {
+            // Check if Second-Me is enabled
+            const isSecondMeEnabled = getSecondMeEnabled();
+            updateSecondMeStatus(isSecondMeEnabled);
+            
+            // Check if Veo2 API key is available
+            const hasVeo2Key = veo2Service.hasApiKey();
+            updateVeo2Status(hasVeo2Key);
+            
+            // Event Listeners
+            initButton.addEventListener('click', initializeSecondMe);
+            settingsButton.addEventListener('click', openSettings);
+            generateButton.addEventListener('click', generateVideo);
+            retrieveHistoryButton.addEventListener('click', retrieveVideoHistory);
+        }
+        
+        // Update UI status indicators
+        function updateSecondMeStatus(isEnabled) {
+            secondMeStatusIndicator.className = 'status-indicator' + (isEnabled ? ' status-enabled' : ' status-disabled');
+            secondMeStatusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+            
+            // Update initialization status if already initialized
+            if (secondMeIntegration.isActive()) {
+                secondMeStatusText.textContent = 'Enabled and Initialized';
+            }
+        }
+        
+        function updateVeo2Status(isEnabled) {
+            veo2StatusIndicator.className = 'status-indicator' + (isEnabled ? ' status-enabled' : ' status-disabled');
+            veo2StatusText.textContent = isEnabled ? 'API Key Available' : 'API Key Missing';
+        }
+        
+        // Initialize Second-Me integration
+        async function initializeSecondMe() {
+            responseDisplay.textContent = 'Initializing Second-Me integration...';
+            try {
+                const result = await secondMeIntegration.initialize();
+                if (result) {
+                    updateSecondMeStatus(true);
+                    responseDisplay.textContent += '\nSecond-Me initialized successfully!';
+                } else {
+                    responseDisplay.textContent += '\nFailed to initialize Second-Me. Check console for details.';
+                }
+            } catch (error) {
+                console.error('Error initializing Second-Me:', error);
+                responseDisplay.textContent += `\nError: ${error.message}`;
+            }
+        }
+        
+        // Open settings panel
+        function openSettings() {
+            settingsManager.show();
+        }
+        
+        // Generate a video through Second-Me
+        async function generateVideo() {
+            const prompt = videoPromptInput.value.trim();
+            if (!prompt) {
+                responseDisplay.textContent = 'Please enter a prompt for video generation.';
+                return;
+            }
+            
+            if (!secondMeIntegration.isActive()) {
+                const initResult = await secondMeIntegration.initialize();
+                if (!initResult) {
+                    responseDisplay.textContent = 'Second-Me integration must be enabled and initialized first.';
+                    return;
+                }
+            }
+            
+            if (!veo2Service.hasApiKey()) {
+                responseDisplay.textContent = 'Veo 2 API key is required. Please add it in settings.';
+                return;
+            }
+            
+            try {
+                responseDisplay.textContent = `Generating video with prompt: "${prompt}"...`;
+                
+                // Clear previous results
+                generationResult.innerHTML = '';
+                
+                // Get the MCP client from Second-Me integration
+                const mcpClient = secondMeIntegration.getMCPClient();
+                
+                // Execute the generate_video tool directly
+                const result = await mcpClient.executeTool('generate_video', {
+                    prompt: prompt,
+                    aspectRatio: aspectRatioSelect.value,
+                    duration: parseInt(durationSelect.value),
+                    enhancePrompt: enhancePromptCheckbox.checked
+                });
+                
+                responseDisplay.textContent += '\nVideo generated successfully!';
+                responseDisplay.textContent += `\nResponse: ${JSON.stringify(result, null, 2)}`;
+                
+                // Display the video
+                if (result.videoUrl) {
+                    const videoElement = document.createElement('video');
+                    videoElement.src = result.videoUrl;
+                    videoElement.controls = true;
+                    videoElement.autoplay = true;
+                    videoElement.loop = true;
+                    videoElement.muted = false;
+                    generationResult.appendChild(videoElement);
+                    
+                    // Store in memory
+                    const memory = secondMeIntegration.getMemory();
+                    if (memory) {
+                        await memory.storeVideoGeneration(result);
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating video:', error);
+                responseDisplay.textContent += `\nError: ${error.message}`;
+            }
+        }
+        
+        // Retrieve video generation history
+        async function retrieveVideoHistory() {
+            memoryList.innerHTML = '';
+            
+            if (!secondMeIntegration.isActive()) {
+                responseDisplay.textContent = 'Second-Me integration must be enabled and initialized first.';
+                return;
+            }
+            
+            try {
+                responseDisplay.textContent = 'Retrieving video generation history...';
+                
+                const memory = secondMeIntegration.getMemory();
+                if (!memory) {
+                    responseDisplay.textContent = 'Memory interface not available.';
+                    return;
+                }
+                
+                const history = await memory.getVideoGenerationHistory();
+                responseDisplay.textContent += `\nRetrieved ${history.length || 0} videos.`;
+                
+                if (history && Array.isArray(history)) {
+                    history.forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'memory-item';
+                        
+                        const timestamp = new Date(item.timestamp).toLocaleString();
+                        const prompt = item.data.prompt;
+                        const videoUrl = item.data.videoUrl;
+                        
+                        li.innerHTML = `
+                            <div>
+                                <strong>Prompt:</strong> ${prompt}
+                                <span class="memory-timestamp">${timestamp}</span>
+                            </div>
+                            <div>
+                                <a href="${videoUrl}" target="_blank">View Video</a>
+                            </div>
+                        `;
+                        
+                        memoryList.appendChild(li);
+                    });
+                } else {
+                    memoryList.innerHTML = '<li class="memory-item">No video history found</li>';
+                }
+            } catch (error) {
+                console.error('Error retrieving video history:', error);
+                responseDisplay.textContent += `\nError: ${error.message}`;
+            }
+        }
+        
+        // Initialize the UI when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initUI);
+        
+        // Check if DOM is already loaded
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initUI();
+        }
+    </script>
+</body>
+</html>

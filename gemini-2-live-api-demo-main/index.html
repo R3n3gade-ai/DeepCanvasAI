@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Live</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar left-sidebar">
+            <div class="sidebar-header">
+                <button id="workspaceBtn" class="header-btn workspace-btn active">Workspace</button>
+                <button id="projectsBtn" class="header-btn projects-btn">Projects</button>
+            </div>
+            
+            <div class="sidebar-content workspace-content">
+                <button class="sidebar-btn chat-btn">
+                    <span class="sidebar-icon">💬</span> Chat
+                </button>
+                <button class="sidebar-btn image-btn">
+                    <span class="sidebar-icon">🖼️</span> Image
+                </button>
+                <button class="sidebar-btn code-btn">
+                    <span class="sidebar-icon">&lt;/&gt;</span> Code
+                </button>
+                <button class="sidebar-btn documents-btn">
+                    <span class="sidebar-icon">📄</span> Documents
+                </button>
+                <button class="sidebar-btn analytics-btn">
+                    <span class="sidebar-icon">📊</span> Analytics
+                </button>
+            </div>
+            
+            <div class="sidebar-content projects-content" style="display: none;">
+                <!-- Projects content would go here -->
+                <div class="empty-state">No projects yet</div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Chat Interface (default view) -->
+            <div id="chatInterface" class="content-section active">
+                <div id="chatHistory" class="chat-history"></div>
+                
+                <div class="control-panel">
+                    <button id="micBtn" class="control-btn talk-btn">
+                        <span class="mic-icon">🎤</span> Talk
+                    </button>
+                    <button id="cameraBtn" class="control-btn webcam-btn">
+                        <span class="camera-icon">📷</span> Webcam
+                    </button>
+                    <button id="screenBtn" class="control-btn screen-btn">
+                        <span class="screen-icon">🖥️</span> Share Screen
+                    </button>
+                </div>
+                
+                <div class="text-input-container">
+                    <textarea id="messageInput" placeholder="Ask anything" class="text-input"></textarea>
+                    <button id="sendBtn" class="send-btn">➤</button>
+                </div>
+                
+                <!-- Second-Me Brain Slots -->
+                <div class="brain-slots-container">
+                    <div id="brainSlot1" class="brain-slot empty">
+                        <div class="brain-icon">🧠</div>
+                        <div class="brain-label">Brain 1</div>
+                    </div>
+                    <div id="brainSlot2" class="brain-slot empty">
+                        <div class="brain-icon">🧠</div>
+                        <div class="brain-label">Brain 2</div>
+                    </div>
+                </div>
+                
+                <canvas id="visualizer" class="visualizer"></canvas>
+                <div id="cameraPreview" class="camera-preview"></div>
+                <div id="screenPreview" class="screen-preview"></div>
+            </div>
+            
+            <!-- Social Station (Hidden - Now uses social-station.html page) -->
+            <div id="socialStationSection" class="content-section feature-overlay" style="display:none">
+                <!-- Content removed - see social-station.html -->
+            </div>
+            
+            <!-- App/Web Builder -->
+            <div id="appBuilderSection" class="content-section feature-overlay">
+                <div class="feature-content">
+                    <h1 class="feature-title">App/Web Builder</h1>
+                    <p class="feature-description">
+                        Welcome to the App/Web Builder. This feature is coming soon and will allow you to create and deploy web applications and websites with the help of Gemini AI.
+                    </p>
+                    <button class="close-feature-btn">Close</button>
+                </div>
+            </div>
+            
+            <!-- Creation Studio (Hidden - Now uses creation-studio.html page) -->
+            <div id="creationStudioSection" class="content-section feature-overlay" style="display:none">
+                <!-- Content removed - see creation-studio.html -->
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar right-sidebar">
+            <div class="sidebar-header">
+                <button id="toolsBtn" class="header-btn tools-btn active">Tools</button>
+                <button id="connectionsBtn" class="header-btn connections-btn">Connections</button>
+            </div>
+            
+            <div class="sidebar-content tools-content">
+                <button class="sidebar-btn agent-flow-btn">
+                    <span class="sidebar-icon">📋</span> Agent Flow
+                </button>
+                <button class="sidebar-btn chat-flow-btn">
+                    <span class="sidebar-icon">💬</span> Chat Flow
+                </button>
+                <button class="sidebar-btn creation-studio-btn">
+                    <span class="sidebar-icon">✨</span> Creation Studio
+                </button>
+                <button class="sidebar-btn app-builder-btn">
+                    <span class="sidebar-icon">🧩</span> App/Web Builder
+                </button>
+                <button class="sidebar-btn model-training-btn">
+                    <span class="sidebar-icon">🧠</span> Model Training
+                </button>
+                <button class="sidebar-btn social-station-btn">
+                    <span class="sidebar-icon">👥</span> Social Station
+                </button>
+                <button class="sidebar-btn video-editor-btn">
+                    <span class="sidebar-icon">🎬</span> Video Editor
+                </button>
+                
+                <!-- Gemini Settings Section -->
+                <div class="gemini-settings">
+                    <div class="model-dropdown">
+                        <select id="modelSelect" class="model-select">
+                            <option>Gemini 2.5 Pro Preview 05-06</option>
+                            <option>Gemini 1.5 Pro</option>
+                            <option>Gemini 1.5 Flash</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Token count</span>
+                        <span class="token-count">599 / 1,048,576</span>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Temperature</span>
+                        <div class="setting-control">
+                            <input type="range" min="0" max="1" step="0.1" value="0.7" class="temperature-slider">
+                            <input type="text" value="1" class="temperature-value">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Structured output</span>
+                        <div class="setting-control">
+                            <span class="edit-link">Edit</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Code execution</span>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Function calling</span>
+                        <div class="setting-control">
+                            <span class="edit-link">Edit</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Grounding with Google Search</span>
+                        <div class="setting-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Voice</span>
+                        <div class="setting-control">
+                            <select id="voiceSelect" class="voice-select">
+                                <option value="Puck">Puck</option>
+                                <option value="Charon">Charon</option>
+                                <option value="Kore">Kore</option>
+                                <option value="Fenrir">Fenrir</option>
+                                <option value="Aoede" selected>Aoede</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-row">
+                        <span class="setting-label">Language</span>
+                        <div class="setting-control">
+                            <select id="languageSelect" class="language-select">
+                                <option value="en-US" selected>English (US)</option>
+                                <option value="en-GB">English (UK)</option>
+                                <option value="es-ES">Spanish</option>
+                                <option value="fr-FR">French</option>
+                                <option value="de-DE">German</option>
+                                <option value="ja-JP">Japanese</option>
+                                <option value="ko-KR">Korean</option>
+                                <option value="zh-CN">Chinese (Simplified)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn copy-btn">
+                            <span class="action-icon">📋</span>
+                        </button>
+                        <button class="action-btn share-btn">
+                            <span class="action-icon">↗️</span>
+                        </button>
+                        <button class="action-btn save-btn">
+                            <span class="action-icon">💾</span>
+                        </button>
+                        <button class="action-btn refresh-btn">
+                            <span class="action-icon">🔄</span>
+                        </button>
+                        <button class="action-btn more-btn">
+                            <span class="action-icon">⋮</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-content connections-content" style="display: none;">
+                <!-- Connections content would go here -->
+                <div class="empty-state">No connections yet</div>
+            </div>
+        </div>
+        
+        <!-- Hidden buttons for compatibility -->
+        <button id="disconnectBtn" class="disconnect-btn" style="display: none;">Disconnect</button>
+        <button id="connectBtn" class="connect-btn" style="display: none;">Connect</button>
+        <button id="settingsBtn" class="settings-btn" style="display: none;">⚙️</button>
+    </div>
+    <script src="js/init-veo2.js"></script>
+    <script type="module" src="js/script.js"></script>
+</body>
+</html>
