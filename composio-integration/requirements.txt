@@ -1,0 +1,12 @@
+composio_core>=0.7.0
+composio_openai>=0.7.0
+composio_crewai>=0.7.0
+composio_langchain>=0.7.0
+mem0ai>=0.1.0
+openai>=1.0.0
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+jinja2>=3.1.2
+python-multipart>=0.0.6
