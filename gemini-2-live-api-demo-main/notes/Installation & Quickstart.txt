@@ -1,0 +1,435 @@
+Installation & Quickstart
+Relevant source files
+This document provides instructions for installing Composio and getting started with basic usage. It covers the essentials needed to add tool capabilities to your AI agents through both Python and JavaScript SDKs. For more detailed architecture information, see Architecture.
+
+Prerequisites
+Before installing Composio, ensure you have:
+
+Python 3.8+ (for Python SDK)
+Node.js 16+ (for JavaScript SDK)
+An OpenAI API key (for examples using OpenAI)
+A Composio API key (obtainable through composio login)
+Sources: 
+fern/getting-started/installation.mdx
+11-12
+ 
+fern/getting-started/installation.mdx
+45-46
+
+Installation Options
+Python SDK
+Install the core package and desired framework-specific plugins:
+
+# Core package only
+pip install composio_core
+
+# With OpenAI integration
+pip install composio_core composio_openai
+
+# With framework integrations
+pip install composio_langchain  # For LangChain integration
+pip install composio_crewai     # For CrewAI integration
+pip install composio_autogen    # For AutoGen integration
+pip install composio_llamaindex # For LlamaIndex integration
+For additional workspaces support, install with extras:
+
+# All components
+pip install composio_core[all]
+
+# Specific workspaces
+pip install composio_core[docker]  # Docker workspace support
+pip install composio_core[e2b]     # E2B workspace support 
+pip install composio_core[flyio]   # Fly.io workspace support
+After installation, generate SDK types:
+
+composio apps generate-types
+Sources: 
+python/setup.py
+35-88
+ 
+fern/getting-started/installation.mdx
+11-42
+
+JavaScript SDK
+Install the package using your preferred package manager:
+
+# npm
+npm install composio-core
+
+# pnpm
+pnpm add composio-core
+
+# bun
+bun add composio-core
+The JavaScript package includes built-in support for frameworks like OpenAI, Vercel AI SDK, and LangGraph.
+
+Sources: 
+fern/getting-started/installation.mdx
+45-67
+ 
+README.md
+199-205
+
+SDK Architecture Overview
+The diagram below shows the relationship between the core Composio SDK and its framework integrations:
+
+Framework Integrations
+
+Core Components
+
+ComposioToolSet (Core)
+
+Tool Schemas
+
+Workspace System
+
+Authentication System
+
+composio_openai.ComposioToolSet
+
+composio_langchain.toolset
+
+composio_autogen.toolset
+
+composio_llamaindex.toolset
+
+JavaScript ComposioToolSet
+
+OpenAI API
+
+LangChain
+
+AutoGen
+
+LlamaIndex
+
+JS Frameworks (Vercel AI, etc.)
+
+Sources: 
+README.md
+71-97
+
+Authentication Setup
+1. Obtaining an API Key
+Run the following command to authenticate and obtain your Composio API key:
+
+composio login
+This will open a browser window for authentication and generate your API key. Set this key as an environment variable:
+
+# Linux/macOS
+export COMPOSIO_API_KEY=your_api_key_here
+
+# Windows (PowerShell)
+$env:COMPOSIO_API_KEY="your_api_key_here"
+2. Connecting to External Services
+To use external services like GitHub, you need to add them to your Composio account:
+
+# Connect to GitHub
+composio add github
+
+# Connect to other services
+composio add slack
+composio add notion
+# etc.
+Sources: 
+fern/getting-started/quickstart.mdx
+10-33
+ 
+README.md
+134-140
+
+Quick Start: Python
+Basic Usage with OpenAI
+from openai import OpenAI
+from composio_openai import ComposioToolSet, Action
+
+# Initialize clients
+openai_client = OpenAI()
+composio_tool_set = ComposioToolSet()
+
+# Get GitHub tools
+actions = composio_tool_set.get_tools(
+    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
+)
+
+# Create a chat completion
+response = openai_client.chat.completions.create(
+    model="gpt-4-turbo",
+    tools=actions,
+    messages=[
+        {"role": "user", "content": "Star the repository 'composiohq/composio' on GitHub"}
+    ]
+)
+
+# Handle tool calls
+result = composio_tool_set.handle_tool_calls(response)
+print(result)
+Using with OpenAI Assistants
+from openai import OpenAI
+from composio_openai import ComposioToolSet, Action
+
+# Initialize clients
+openai_client = OpenAI()
+composio_tool_set = ComposioToolSet()
+
+# Get GitHub tools
+actions = composio_tool_set.get_tools(
+    actions=[Action.GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER]
+)
+
+# Create an assistant
+assistant = openai_client.beta.assistants.create(
+    name="GitHub Assistant",
+    instructions="You are a super intelligent GitHub assistant",
+    model="gpt-4-turbo",
+    tools=actions,
+)
+
+# Create a thread
+thread = openai_client.beta.threads.create()
+
+# Add a message to the thread
+openai_client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role="user",
+    content="Star the repository 'composiohq/composio'"
+)
+
+# Run the assistant
+run = openai_client.beta.threads.runs.create(
+    thread_id=thread.id,
+    assistant_id=assistant.id
+)
+
+# Handle tool calls
+result = composio_tool_set.wait_and_handle_assistant_tool_calls(
+    client=openai_client,
+    run=run,
+    thread=thread,
+)
+Sources: 
+README.md
+143-196
+ 
+fern/getting-started/quickstart.mdx
+59-88
+
+Quick Start: JavaScript
+Basic Usage with OpenAI
+import { OpenAIToolSet } from "composio-core";
+import OpenAI from "openai";
+
+// Initialize clients
+const toolset = new OpenAIToolSet();
+const openai = new OpenAI();
+
+// Get GitHub tools
+const tools = await toolset.getTools({ 
+  actions: ["GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER"]
+});
+
+// Create a chat completion
+const response = await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [
+    {role: "user", content: "Star the repository 'composiohq/composio' on GitHub"}
+  ],
+  tools: tools,
+  tool_choice: "auto",
+});
+
+// Handle tool calls
+const result = await toolset.handleToolCall(response);
+console.log(result);
+Using with OpenAI Assistants
+import { OpenAIToolSet } from "composio-core";
+import OpenAI from "openai";
+
+// Initialize clients
+const toolset = new OpenAIToolSet();
+const openai = new OpenAI();
+
+// Get GitHub tools
+const tools = await toolset.getTools({ 
+  actions: ["GITHUB_STAR_A_REPOSITORY_FOR_THE_AUTHENTICATED_USER"]
+});
+
+// Create an assistant
+const assistant = await openai.beta.assistants.create({
+  name: "GitHub Assistant",
+  instructions: "You're a GitHub Assistant, you can do operations on GitHub",
+  tools: tools,
+  model: "gpt-4o"
+});
+
+// Create a thread
+const thread = await openai.beta.threads.create();
+
+// Create a run with instructions
+const run = await openai.beta.threads.runs.create(thread.id, {
+  assistant_id: assistant.id,
+  instructions: "Star the repository 'composiohq/composio'",
+  tools: tools,
+  model: "gpt-4o",
+  stream: false
+});
+
+// Handle tool calls
+const result = await toolset.waitAndHandleAssistantToolCalls(openai, run, thread);
+console.log(result);
+Sources: 
+README.md
+198-259
+ 
+fern/getting-started/quickstart.mdx
+89-108
+
+Understanding the Tool Execution Flow
+The diagram below illustrates how Composio manages the tool execution process from LLM request to external service interaction:
+
+External Service (GitHub/etc.)
+Authentication System
+ComposioToolSet
+LLM (OpenAI/etc.)
+User
+External Service (GitHub/etc.)
+Authentication System
+ComposioToolSet
+LLM (OpenAI/etc.)
+User
+Initialize toolset
+Verify API key
+get_tools([Action.EXAMPLE_ACTION])
+Tool definitions (JSON schema)
+Create completion/assistant with tools
+Send user prompt
+Determine tool to use
+Response with tool_calls
+handle_tool_calls(response)
+Retrieve stored credentials
+Make authenticated API call
+API response
+Processed result
+Sources: 
+README.md
+143-196
+ 
+fern/getting-started/quickstart.mdx
+112-120
+
+Workspaces for Local Tools
+Composio offers different workspace types for executing local tools (file operations, shell commands, and code analysis). Each workspace type provides different levels of isolation and deployment options.
+
+Workspace Type	Description	Installation
+Host	Runs directly on your host machine	Included in base package
+Docker	Isolates execution in containers	pip install composio_core[docker]
+E2B	Cloud-based, serverless sandboxes	pip install composio_core[e2b]
+Fly.io	Managed cloud deployment	pip install composio_core[flyio]
+Example of using a workspace:
+
+from composio_openai import ComposioToolSet, WorkspaceType
+
+# Using Host workspace (default)
+toolset = ComposioToolSet()
+
+# Using Docker workspace
+docker_toolset = ComposioToolSet(workspace_config=WorkspaceType.Docker(
+    image="python:3.9",
+    volumes={"/host/path": "/container/path"}
+))
+
+# Using E2B workspace
+e2b_toolset = ComposioToolSet(workspace_config=WorkspaceType.E2B(
+    api_key="your_e2b_api_key",
+    template="template_id"
+))
+Sources: 
+python/setup.py
+58-70
+ 
+fern/workspaces/workspaces.mdx
+6-162
+
+Plugin Architecture
+The diagram below shows the dependency relationships between core and plugin components:
+
+Secondary Plugins
+
+Direct Core Plugins
+
+Core Package
+
+composio_core v0.7.15
+
+composio_openai
+
+composio_langchain
+
+composio_autogen
+
+composio_llamaindex
+
+composio_camel
+
+composio_griptape
+
+composio_lyzr
+
+composio_claude
+
+composio_crewai
+
+composio_julep
+
+Sources: 
+python/plugins/crew_ai/setup.py
+10-32
+ 
+python/plugins/camel/setup.py
+10-32
+ 
+python/plugins/autogen/setup.py
+10-34
+ 
+python/plugins/langchain/setup.py
+10-34
+ 
+python/plugins/llamaindex/setup.py
+10-31
+ 
+python/plugins/openai/setup.py
+10-28
+ 
+python/plugins/griptape/setup.py
+10-28
+ 
+python/plugins/lyzr/setup.py
+10-33
+ 
+python/plugins/claude/setup.py
+10-28
+ 
+python/plugins/julep/setup.py
+10-28
+
+Next Steps
+After completing this quickstart guide, you can explore:
+
+More detailed usage with specific frameworks:
+
+OpenAI Integration
+LangChain Integration
+Other Frameworks
+Advanced features:
+
+Tools & Actions
+Workspaces
+Local Tools
+Triggers & Event Handling
+Authentication and external services:
+
+Connecting to more services: composio add <service-name>
+Managing authentication with composio login
+Sources: 
+fern/getting-started/welcome.mdx
+16-66

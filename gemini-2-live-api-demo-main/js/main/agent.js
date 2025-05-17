@@ -14,6 +14,8 @@ import { DeepgramTranscriber } from '../transcribe/deepgram.js';
 import { CameraManager } from '../camera/camera.js';
 import { ScreenManager } from '../screen/screen.js';
 
+import composioAPI from '../integrations/composio-api.js';
+
 export class GeminiAgent{
     constructor({
         name = 'GeminiAgent',
@@ -35,7 +37,7 @@ export class GeminiAgent{
         this.audioContext = null;
         this.audioRecorder = null;
         this.audioStreamer = null;
-        
+
         // For transcribers
         this.transcribeModelsSpeech = transcribeModelsSpeech;
         this.transcribeUsersSpeech = transcribeUsersSpeech;
@@ -47,7 +49,7 @@ export class GeminiAgent{
         this.captureInterval = 1000 / this.fps;
         this.resizeWidth = localStorage.getItem('resizeWidth') || '640';
         this.quality = localStorage.getItem('quality') || '0.4';
-        
+
         // Initialize camera
         this.cameraManager = new CameraManager({
             width: this.resizeWidth,
@@ -71,11 +73,14 @@ export class GeminiAgent{
             }
         });
         this.screenInterval = null;
-        
+
         // Add function declarations to config
         this.toolManager = toolManager;
         config.tools.functionDeclarations = toolManager.getToolDeclarations() || [];
         this.config = config;
+
+        // Track connected Composio apps
+        this.composioApps = [];
 
         this.name = name;
         this.url = url;
@@ -131,7 +136,7 @@ export class GeminiAgent{
             }
         });
     }
-        
+
     // TODO: Handle multiple function calls
     async handleToolCall(toolCall) {
         const functionCall = toolCall.functionCalls[0];
@@ -168,13 +173,13 @@ export class GeminiAgent{
 
         try {
             await this.cameraManager.initialize();
-            
+
             // Set up interval to capture and send images
             this.cameraInterval = setInterval(async () => {
                 const imageBase64 = await this.cameraManager.capture();
-                this.client.sendImage(imageBase64);                
+                this.client.sendImage(imageBase64);
             }, this.captureInterval);
-            
+
             console.info('Camera capture started');
         } catch (error) {
             await this.disconnect();
@@ -190,11 +195,11 @@ export class GeminiAgent{
             clearInterval(this.cameraInterval);
             this.cameraInterval = null;
         }
-        
+
         if (this.cameraManager) {
             this.cameraManager.dispose();
         }
-        
+
         console.info('Camera capture stopped');
     }
 
@@ -208,13 +213,13 @@ export class GeminiAgent{
 
         try {
             await this.screenManager.initialize();
-            
+
             // Set up interval to capture and send screenshots
             this.screenInterval = setInterval(async () => {
                 const imageBase64 = await this.screenManager.capture();
                 this.client.sendImage(imageBase64);
             }, this.captureInterval);
-            
+
             console.info('Screen sharing started');
         } catch (error) {
             await this.stopScreenShare();
@@ -230,11 +235,11 @@ export class GeminiAgent{
             clearInterval(this.screenInterval);
             this.screenInterval = null;
         }
-        
+
         if (this.screenManager) {
             this.screenManager.dispose();
         }
-        
+
         console.info('Screen sharing stopped');
     }
 
@@ -299,7 +304,7 @@ export class GeminiAgent{
             this.client = null;
             this.initialized = false;
             this.connected = false;
-            
+
             console.info('Disconnected and cleaned up all resources');
         } catch (error) {
             throw new Error('Disconnect error:' + error);
@@ -383,7 +388,7 @@ export class GeminiAgent{
      * Streams audio data to the model in real-time, handling interruptions
      */
     async initialize() {
-        try {            
+        try {
             // Initialize audio components
             this.audioContext = new AudioContext();
             this.audioStreamer = new AudioStreamer(this.audioContext);
@@ -392,7 +397,7 @@ export class GeminiAgent{
             this.audioStreamer.gainNode.connect(this.visualizer.analyser);
             this.visualizer.start();
             this.audioRecorder = new AudioRecorder();
-            
+
             // Initialize transcriber if API key is provided
             if (this.deepgramApiKey) {
                 if (this.transcribeModelsSpeech) {
@@ -406,13 +411,45 @@ export class GeminiAgent{
             } else {
                 console.warn('No Deepgram API key provided, transcription disabled');
             }
-            
+
+            // Register Composio tools for connected apps
+            await this.registerComposioTools();
+
             this.initialized = true;
             console.info(`${this.client.name} initialized successfully`);
             this.client.sendText('.');  // Trigger the model to start speaking first
         } catch (error) {
             console.error('Initialization error:', error);
             throw new Error('Error during the initialization of the client: ' + error.message);
+        }
+    }
+
+    /**
+     * Register Composio tools for connected apps
+     */
+    async registerComposioTools() {
+        try {
+            // Get connected apps from localStorage
+            const savedConnections = localStorage.getItem('composioConnections');
+            if (savedConnections) {
+                const connections = JSON.parse(savedConnections);
+
+                // Register tools for each connected app
+                for (const [appName, connection] of Object.entries(connections)) {
+                    if (connection.connected) {
+                        console.info(`Registering Composio tools for ${appName}...`);
+                        await this.toolManager.registerComposioTool(appName);
+                        this.composioApps.push(appName);
+                    }
+                }
+
+                // Update function declarations in config
+                this.config.tools.functionDeclarations = this.toolManager.getToolDeclarations();
+
+                console.info(`Registered Composio tools for ${this.composioApps.length} apps`);
+            }
+        } catch (error) {
+            console.error('Error registering Composio tools:', error);
         }
     }
 
@@ -440,7 +477,7 @@ export class GeminiAgent{
             return;
         }
         await this.audioRecorder.toggleMic();
-    }           
+    }
 
     // Add event emitter functionality
     on(eventName, callback) {

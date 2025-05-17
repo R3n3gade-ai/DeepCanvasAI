@@ -1,0 +1,666 @@
+JavaScript SDK
+Relevant source files
+The Composio JavaScript SDK provides a comprehensive toolkit for integrating Composio's AI tool capabilities into JavaScript and TypeScript applications. It enables developers to connect to various external services and AI frameworks, execute actions on those services, and create custom tools. This document covers the key components, initialization, usage patterns, and framework integrations for the JavaScript SDK.
+
+For information about the Python SDK, see Python SDK.
+
+Core Architecture
+The JavaScript SDK is built around a modular architecture with several key components that work together to provide tool functionality to various AI frameworks.
+
+Composio
+
++backendClient: AxiosBackendClient
+
++connectedAccounts: ConnectedAccounts
+
++apps: Apps
+
++actions: Actions
+
++triggers: Triggers
+
++integrations: Integrations
+
++activeTriggers: ActiveTriggers
+
++getEntity(id) : : Entity
+
++getExpectedParamsForUser(params) : : Promise
+
+ComposioToolSet
+
++client: Composio
+
++apiKey: string
+
++entityId: string
+
++connectedAccountIds: Record
+
++userActionRegistry: ActionRegistry
+
++getToolsSchema(filters) : : Promise
+
++executeAction(params) : : Promise
+
++createAction(options) : : Promise
+
++addPreProcessor(processor) : : Promise
+
++addPostProcessor(processor) : : Promise
+
++addSchemaProcessor(processor) : : Promise
+
+Entity
+
++id: string
+
++execute(params) : : Promise
+
++getConnection(params) : : Promise
+
++setupTrigger(params) : : Promise
+
++disableTrigger(triggerId) : : Promise
+
++getConnections() : : Promise
+
++getActiveTriggers() : : Promise
+
++initiateConnection(data) : : Promise
+
+ActionRegistry
+
++client: Composio
+
++customActions: Map
+
++createAction(options) : : Promise
+
++getActions(params) : : Promise
+
++getAllActions() : : Promise
+
++executeAction(name, params, metadata) : : Promise
+
+«interface»
+
+FrameworkIntegration
+
++getTools(filters) : : Promise
+
++executeToolCall(tool) : : Promise
+
+OpenAIToolSet
+
++getTools(filters) : : Promise
+
++executeToolCall(tool) : : Promise
+
++handleToolCall(chatCompletion) : : Promise
+
++handleAssistantMessage(run) : : Promise
+
++waitAndHandleAssistantToolCalls(client, run, thread) : : Promise
+
+LangchainToolSet
+
++getTools(filters) : : Promise
+
+VercelAIToolSet
+
++getTools(filters) : : Promise
+
++executeToolCall(tool) : : Promise
+
+CloudflareToolSet
+
++getTools(filters) : : Promise
+
++executeToolCall(tool) : : Promise
+
++handleToolCalls(result) : : Promise
+
+Sources:
+
+js/src/sdk/index.ts
+33-320
+js/src/sdk/base.toolset.ts
+41-391
+js/src/sdk/models/Entity.ts
+44-412
+js/src/sdk/actionRegistry.ts
+59-224
+js/src/frameworks/openai.ts
+14-279
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/cloudflare.ts
+18-142
+Installation and Setup
+The Composio JavaScript SDK is available as an npm package and can be installed using npm, yarn, or pnpm.
+
+npm install composio-core
+# or
+yarn add composio-core
+# or
+pnpm add composio-core
+The SDK has several peer dependencies depending on which AI framework you're integrating with:
+
+Framework	Required Peer Dependencies
+OpenAI	openai >= 4.50.0
+LangChain	langchain >= 0.2.11, @langchain/core >= 0.2.18, @langchain/openai >= 0.2.5
+Vercel AI	ai >= 3.2.22
+Cloudflare	@cloudflare/workers-types >= 4.20240718.0
+Sources:
+
+js/package.json
+35-44
+Core Classes
+Composio Class
+The Composio class serves as the main entry point for interacting with the Composio service. It provides methods to access various models and entities.
+
+// Initialize the main Composio client
+const composio = new Composio({
+  apiKey: "your_api_key_here",
+  baseUrl: "https://api.composio.dev", // Optional
+  runtime: "my-application", // Optional
+  allowTracing: false // Optional
+});
+
+// Get an entity
+const entity = composio.getEntity("user123");
+The Composio constructor accepts the following options:
+
+Parameter	Type	Description	Default
+apiKey	string	Your Composio API key	Environment variable
+baseUrl	string	The base URL for the Composio API	"https://api.composio.dev"
+runtime	string	Runtime environment identifier	undefined
+allowTracing	boolean	Enable tracing for debugging	false
+Sources:
+
+js/src/sdk/index.ts
+33-320
+js/src/sdk/utils/config.ts
+136-151
+ComposioToolSet Class
+The ComposioToolSet class is the core class that provides functionality for retrieving tool schemas and executing actions. It's also the base class for framework-specific integrations.
+
+// Initialize a ComposioToolSet
+const toolset = new ComposioToolSet({
+  apiKey: "your_api_key_here",
+  entityId: "user123",
+  connectedAccountIds: {
+    "github": "github_connected_account_id",
+    "slack": "slack_connected_account_id"
+  }
+});
+
+// Get tool schemas
+const tools = await toolset.getToolsSchema({
+  apps: ["github", "slack"],
+  tags: ["file", "important"]
+});
+
+// Execute an action
+const result = await toolset.executeAction({
+  action: "github_create_issue",
+  params: {
+    owner: "owner",
+    repo: "repo",
+    title: "Issue title",
+    body: "Issue description"
+  }
+});
+Sources:
+
+js/src/sdk/base.toolset.ts
+41-391
+Workflow
+"External Service"
+"LLM Framework"
+"Composio API"
+"Composio SDK"
+"Developer"
+"External Service"
+"LLM Framework"
+"Composio API"
+"Composio SDK"
+"Developer"
+new Composio({ apiKey: "..." })
+new FrameworkToolSet({ apiKey: "..." })
+getTools({ apps: ["github"] })
+Request tool schemas
+Return tool schemas
+Framework-specific tools
+Initialize with tools
+Tool call (executeToolCall)
+Execute action
+API request
+Response
+Action result
+Tool result
+Final response
+Sources:
+
+js/src/sdk/base.toolset.ts
+241-323
+js/src/frameworks/openai.ts
+77-101
+js/src/frameworks/vercel.ts
+116-143
+Framework Integrations
+The Composio JavaScript SDK provides specialized integrations for popular AI frameworks, each extending the base ComposioToolSet class with framework-specific functionality.
+
+OpenAI Integration
+The OpenAIToolSet class provides integration with OpenAI's models and assistants, supporting both the Chat Completions API and Assistants API.
+
+import { OpenAI } from 'openai';
+import { OpenAIToolSet } from 'composio-core';
+
+// Initialize OpenAI client
+const openai = new OpenAI({ apiKey: 'your_openai_api_key' });
+
+// Initialize Composio OpenAI toolset
+const composioTools = new OpenAIToolSet({
+  apiKey: 'your_composio_api_key',
+  entityId: 'user123'
+});
+
+// Get tools for OpenAI
+const tools = await composioTools.getTools({
+  apps: ['github', 'slack'],
+  tags: ['important']
+});
+
+// Use with Chat Completions API
+const completion = await openai.chat.completions.create({
+  model: 'gpt-4o',
+  messages: [{ role: 'user', content: 'Create a GitHub issue' }],
+  tools: tools
+});
+
+// Handle tool calls
+if (completion.choices[0].message.tool_calls) {
+  const toolResults = await composioTools.handleToolCall(completion);
+  // Send tool results back to the model
+}
+
+// Use with Assistants API
+const assistant = await openai.beta.assistants.create({
+  name: 'GitHub Assistant',
+  instructions: 'Help users manage GitHub issues',
+  model: 'gpt-4o',
+  tools: tools
+});
+
+// Create a thread and run
+const thread = await openai.beta.threads.create();
+await openai.beta.threads.messages.create(thread.id, {
+  role: 'user',
+  content: 'Create a GitHub issue'
+});
+
+const run = await openai.beta.threads.runs.create(thread.id, {
+  assistant_id: assistant.id
+});
+
+// Handle assistant tool calls
+const completedRun = await composioTools.waitAndHandleAssistantToolCalls(
+  openai,
+  run,
+  thread
+);
+Sources:
+
+js/src/frameworks/openai.ts
+14-279
+LangChain Integration
+The LangchainToolSet class provides integration with LangChain, converting Composio tools to LangChain tools.
+
+import { ChatOpenAI } from '@langchain/openai';
+import { AgentExecutor, createOpenAIFunctionsAgent } from 'langchain/agents';
+import { LangchainToolSet } from 'composio-core';
+
+// Initialize LangChain toolset
+const langchainTools = new LangchainToolSet({
+  apiKey: 'your_composio_api_key',
+  entityId: 'user123'
+});
+
+// Get LangChain tools
+const tools = await langchainTools.getTools({
+  apps: ['github', 'slack'],
+  actions: ['github_create_issue']
+});
+
+// Set up LangChain agent
+const model = new ChatOpenAI({ temperature: 0 });
+const agent = await createOpenAIFunctionsAgent({
+  llm: model,
+  tools: tools,
+  prompt: promptTemplate
+});
+
+const agentExecutor = new AgentExecutor({
+  agent,
+  tools
+});
+
+// Execute the agent
+const result = await agentExecutor.invoke({
+  input: 'Create a GitHub issue about a bug'
+});
+Sources:
+
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/langchain.spec.ts
+1-86
+Vercel AI Integration
+The VercelAIToolSet class provides integration with Vercel AI SDK, enabling use of Composio tools with Vercel's AI components.
+
+import { VercelAIToolSet } from 'composio-core';
+import { StreamingTextResponse, createAI } from 'ai';
+
+// Initialize Vercel AI toolset
+const vercelTools = new VercelAIToolSet({
+  apiKey: 'your_composio_api_key',
+  entityId: 'user123'
+});
+
+// Get tools for Vercel AI
+const tools = await vercelTools.getTools({
+  apps: ['github', 'slack']
+});
+
+// Use with Vercel AI SDK
+export async function POST(req) {
+  const { messages } = await req.json();
+  
+  const ai = createAI({
+    tools,
+    messages,
+    async experimental_toolCallHandler({ tool, args }) {
+      const result = await vercelTools.executeToolCall({
+        name: tool,
+        arguments: args
+      });
+      
+      return result;
+    }
+  });
+  
+  return new StreamingTextResponse(ai.stream);
+}
+Sources:
+
+js/src/frameworks/vercel.ts
+23-144
+Cloudflare Workers Integration
+The CloudflareToolSet class provides integration with Cloudflare Workers AI, enabling use of Composio tools in Cloudflare Workers environments.
+
+import { CloudflareToolSet } from 'composio-core';
+
+// Initialize Cloudflare toolset
+const cloudflareTools = new CloudflareToolSet({
+  apiKey: 'your_composio_api_key',
+  entityId: 'user123'
+});
+
+// Get tools for Cloudflare
+const tools = await cloudflareTools.getTools({
+  apps: ['github', 'slack']
+});
+
+// Use with Cloudflare Workers AI
+export default {
+  async fetch(request, env) {
+    const ai = new Ai(env.AI);
+    
+    const result = await ai.run('@cf/meta/llama-3-8b-instruct', {
+      messages: [{ role: 'user', content: 'Create a GitHub issue' }],
+      tools: tools
+    });
+    
+    // Handle tool calls
+    if (result.response.tool_calls?.length > 0) {
+      const toolResults = await cloudflareTools.handleToolCalls(result);
+      // Continue the conversation with tool results
+    }
+    
+    return new Response(JSON.stringify(result));
+  }
+};
+Sources:
+
+js/src/frameworks/cloudflare.ts
+18-142
+Custom Actions
+The JavaScript SDK allows you to create custom actions that integrate with your own logic or extend existing functionality.
+
+// Create a custom action for the GitHub tool
+await toolset.createAction({
+  actionName: 'custom_github_star_repo',
+  toolName: 'github',
+  description: 'Star a repository on GitHub',
+  inputParams: z.object({
+    owner: z.string().describe('Repository owner'),
+    repo: z.string().describe('Repository name')
+  }),
+  callback: async (params, authCredentials, executeRequest) => {
+    // Use executeRequest to send an authenticated request via Composio
+    const result = await executeRequest({
+      endpoint: `/user/starred/${params.owner}/${params.repo}`,
+      method: 'PUT',
+      parameters: []
+    });
+    
+    return result;
+  }
+});
+
+// Execute the custom action
+const result = await toolset.executeAction({
+  action: 'custom_github_star_repo',
+  params: {
+    owner: 'ComposioHQ',
+    repo: 'composio'
+  }
+});
+Sources:
+
+js/src/sdk/actionRegistry.ts
+59-224
+js/src/sdk/base.toolset.ts
+224-236
+js/src/frameworks/langchain.spec.ts
+40-85
+Pre and Post Processors
+The Composio JavaScript SDK provides a way to process inputs before they're sent to the API and process outputs before they're returned to the application.
+
+// Add a pre-processor to modify input parameters
+await toolset.addPreProcessor(({ params, actionName }) => {
+  console.log(`Executing action: ${actionName}`);
+  
+  // Add a timestamp to all requests
+  return {
+    ...params,
+    timestamp: new Date().toISOString()
+  };
+});
+
+// Add a post-processor to modify response data
+await toolset.addPostProcessor(({ actionName, toolResponse }) => {
+  console.log(`Received response for action: ${actionName}`);
+  
+  // Add metadata to the response
+  return {
+    ...toolResponse,
+    data: {
+      ...toolResponse.data,
+      processed_at: new Date().toISOString()
+    }
+  };
+});
+Sources:
+
+js/src/sdk/base.toolset.ts
+350-389
+js/src/sdk/base.toolset.spec.ts
+83-156
+Entity and Connection Management
+The JavaScript SDK provides functionality for managing entities and their connections to various services.
+
+// Get an entity
+const entity = composio.getEntity('user123');
+
+// Get connections for an entity
+const connections = await entity.getConnections();
+
+// Get a specific connection
+const githubConnection = await entity.getConnection({
+  appName: 'github'
+});
+
+// Execute an action for an entity
+const result = await entity.execute({
+  actionName: 'github_create_issue',
+  params: {
+    owner: 'owner',
+    repo: 'repo',
+    title: 'Issue title',
+    body: 'Issue description'
+  }
+});
+
+// Initiate a new connection
+const connectionRequest = await entity.initiateConnection({
+  appName: 'github',
+  authMode: 'OAUTH2',
+  redirectUri: 'https://myapp.com/oauth/callback'
+});
+
+// Get the OAuth redirect URL
+const redirectUrl = connectionRequest.redirectUrl;
+
+// After OAuth callback, wait for the connection to become active
+const activeConnection = await connectionRequest.waitUntilActive();
+Sources:
+
+js/src/sdk/models/Entity.ts
+44-412
+js/src/sdk/models/connectedAccounts.ts
+291-366
+Trigger Management
+The JavaScript SDK allows you to set up and manage triggers for event-driven workflows.
+
+// Set up a trigger
+const trigger = await entity.setupTrigger({
+  appName: 'github',
+  triggerName: 'github_repository_push',
+  config: {
+    repository: 'myrepo',
+    branch: 'main'
+  }
+});
+
+// Get active triggers
+const activeTriggers = await entity.getActiveTriggers();
+
+// Disable a trigger
+await entity.disableTrigger(trigger.triggerId);
+Sources:
+
+js/src/sdk/models/Entity.ts
+260-293
+js/src/sdk/models/Entity.ts
+304-316
+js/src/sdk/models/Entity.ts
+349-370
+js/src/sdk/models/triggers.ts
+239-265
+Error Handling
+The JavaScript SDK includes a comprehensive error handling system through the ComposioError class.
+
+try {
+  const result = await toolset.executeAction({
+    action: 'github_create_issue',
+    params: { /* ... */ }
+  });
+} catch (error) {
+  if (error.name === 'ComposioError') {
+    console.error(`Error Code: ${error.code}`);
+    console.error(`Message: ${error.message}`);
+    console.error(`Description: ${error.description}`);
+    
+    if (error.code === 'SDK.NO_CONNECTED_ACCOUNT_FOUND') {
+      // Handle missing connection
+    } else if (error.code === 'BACKEND.AUTHENTICATION_FAILED') {
+      // Handle authentication error
+    }
+  } else {
+    console.error('Unexpected error:', error);
+  }
+}
+Sources:
+
+js/src/sdk/utils/error.ts
+1-65
+js/src/sdk/utils/errors/src/formatter.ts
+1-110
+Comparison with Framework-Specific Classes
+Cloudflare Methods
+
+Vercel Methods
+
+LangChain Methods
+
+OpenAI Methods
+
+Base Methods
+
+extends
+
+extends
+
+extends
+
+extends
+
+ComposioToolSet (Base Class)
+
+OpenAIToolSet
+
+LangchainToolSet
+
+VercelAIToolSet
+
+CloudflareToolSet
+
+Unsupported markdown: list
+Unsupported markdown: list
+Unsupported markdown: list
+Unsupported markdown: list
+Unsupported markdown: list
+Sources:
+
+js/src/sdk/base.toolset.ts
+41-391
+js/src/frameworks/openai.ts
+14-279
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/cloudflare.ts
+18-142
+Further Information
+For detailed information about specific components of the JavaScript SDK, refer to the following wiki pages:
+
+Core JS Package - Detailed documentation of the JavaScript SDK core package
+JS Framework Integrations - Guide to using the JavaScript SDK with various frameworks
+Tools & Actions - Explanation of the Tool and Action abstractions and how to use them
+MCP (Model Context Protocol) - Overview of the MCP sys

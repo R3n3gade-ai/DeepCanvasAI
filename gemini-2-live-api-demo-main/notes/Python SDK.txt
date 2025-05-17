@@ -1,0 +1,633 @@
+Python SDK
+Relevant source files
+The Python SDK is the primary interface for integrating Composio's tool and action ecosystem into Python applications. It enables developers to connect AI models with a wide variety of external services, providing a unified interface for tool execution across multiple AI frameworks including LangChain, OpenAI, AutoGen, LlamaIndex, and others.
+
+For information about the JavaScript implementation, see JavaScript SDK.
+
+Architecture Overview
+The Python SDK is built around a core module (composio_core) that provides the foundation for tool execution, authentication, workspace management, and framework integrations.
+
+"uses"
+
+"contains"
+
+"contains"
+
+"contains"
+
+"contains"
+
+"uses"
+
+ComposioToolSet
+
++getToolsSchema()
+
++executeAction()
+
++addAuth()
+
++addPreProcessor()
+
++addPostProcessor()
+
++addSchemaProcessor()
+
++createTriggerListener()
+
+ProcessorHelper
+
++processRequest()
+
++processResponse()
+
++processSchemaProperties()
+
+FileIOHelper
+
++writeOutput()
+
++writeDownloadable()
+
+SchemaHelper
+
++getActionSchemas()
+
++getRemoteActionSchemas()
+
++getLocalActionSchemas()
+
++getRuntimeActionSchemas()
+
+CustomAuthHelper
+
++add()
+
++getCustomParamsForLocalExecution()
+
++getCustomParamsForRemoteExecution()
+
++hasCustomAuth()
+
+Entity
+
++execute()
+
++getConnection()
+
++setupTrigger()
+
++disableTrigger()
+
++getActiveTriggers()
+
++initiateConnection()
+
+Composio
+
++api_key
+
++base_url
+
++apps
+
++actions
+
++triggers
+
++connected_accounts
+
+Sources: 
+python/composio/tools/toolset.py
+91-1050
+ 
+python/composio/client/__init__.py
+58-228
+
+Integration Architecture
+The SDK integrates with various AI frameworks through dedicated plugins, each extending the core ComposioToolSet functionality to work with a specific framework.
+
+Developer
+
+Python SDK
+
+composio_core
+
+Framework Plugins
+
+ComposioToolSet
+
+composio_langchain
+
+composio_openai
+
+composio_llamaindex
+
+composio_autogen
+
+composio_crewai
+
+composio_claude
+
+composio_camel
+
+composio_griptape
+
+Actions API
+
+Workspaces
+
+Local Tools
+
+Host Workspace
+
+Docker Workspace
+
+E2B Workspace
+
+Fly.io Workspace
+
+File Tools
+
+Shell Tools
+
+Code Analysis
+
+External Services
+
+GitHub
+
+Gmail
+
+Slack
+
+Other Services...
+
+Sources: 
+python/setup.py
+10-126
+ 
+python/plugins/langchain/setup.py
+10-33
+ 
+python/plugins/openai/setup.py
+10-27
+ 
+python/plugins/autogen/setup.py
+10-33
+
+Installation
+The Python SDK can be installed using pip:
+
+# Install core package
+pip install composio_core
+
+# Install specific framework integrations
+pip install composio_langchain  # For LangChain integration
+pip install composio_openai     # For OpenAI integration
+pip install composio_autogen    # For AutoGen integration
+
+# Install all dependencies
+pip install composio_core[all]
+
+# Install specific workspace dependencies
+pip install composio_core[docker]  # For Docker workspace support
+pip install composio_core[e2b]     # For E2B workspace support
+pip install composio_core[flyio]   # For Fly.io workspace support
+Sources: 
+python/setup.py
+35-118
+
+Authentication
+The SDK requires authentication with the Composio platform. This can be done either by providing an API key directly or through the environment variable COMPOSIO_API_KEY:
+
+from composio.tools import ComposioToolSet
+
+# Method 1: Provide API key directly
+toolset = ComposioToolSet(api_key="your-api-key")
+
+# Method 2: Use environment variable (COMPOSIO_API_KEY)
+# export COMPOSIO_API_KEY="your-api-key"
+toolset = ComposioToolSet()
+To get an API key, you can use the Composio CLI:
+
+composio login
+Sources: 
+python/composio/client/__init__.py
+95-121
+ 
+python/composio/exceptions.py
+195-206
+
+Core Concepts
+ComposioToolSet
+The ComposioToolSet class is the main entry point for using the SDK. It provides methods for getting tool schemas and executing actions:
+
+from composio.tools import ComposioToolSet
+from composio import Action, App
+
+# Create toolset
+toolset = ComposioToolSet()
+
+# Get schemas for specific actions
+schemas = toolset.get_action_schemas(
+    actions=[
+        Action.GITHUB_LIST_REPOSITORIES,
+        Action.GMAIL_SEND_EMAIL,
+    ]
+)
+
+# Execute an action
+result = toolset.execute_action(
+    action=Action.GITHUB_LIST_REPOSITORIES,
+    params={"visibility": "public"}
+)
+Sources: 
+python/composio/tools/toolset.py
+91-196
+ 
+python/composio/tools/__init__.py
+1-4
+
+Actions, Apps, and Triggers
+Actions are the basic units of functionality in Composio. They represent operations that can be performed, such as searching the web, sending an email, or querying an API.
+
+Apps represent external services that Composio can connect to, like GitHub, Gmail, or Slack.
+
+Triggers allow you to receive notifications when certain events occur in an external service, like a new email in Gmail or a new commit in GitHub.
+
+from composio import Action, App, Trigger
+
+# Actions
+github_action = Action.GITHUB_LIST_REPOSITORIES
+gmail_action = Action.GMAIL_SEND_EMAIL
+
+# Check properties
+print(github_action.name)  # "LIST_REPOSITORIES" 
+print(github_action.app)   # "GITHUB"
+print(github_action.tags)  # ["repos", "important", ...]
+print(github_action.no_auth)  # False
+print(github_action.is_local)  # False
+
+# Apps
+github_app = App.GITHUB
+gmail_app = App.GMAIL
+
+# Get all actions for an app
+github_actions = github_app.get_actions()
+
+# Get actions with specific tags
+repo_actions = github_app.get_actions(tags=["repos"])
+
+# Triggers
+github_trigger = Trigger.GITHUB_COMMIT_EVENT
+gmail_trigger = Trigger.GMAIL_NEW_GMAIL_MESSAGE
+Sources: 
+python/composio/client/enums/action.py
+1-172
+ 
+python/composio/client/enums/enum.py
+1-180
+ 
+python/tests/test_client/test_enum.py
+117-202
+
+Authentication and Connected Accounts
+To interact with external services, you need to authenticate and create connected accounts:
+
+from composio import App
+
+# Check if a connected account exists
+try:
+    toolset.check_connected_account(action=Action.GITHUB_LIST_REPOSITORIES)
+    print("Connected to GitHub")
+except:
+    print("Not connected to GitHub")
+
+# Get all connected accounts
+accounts = toolset.get_connected_accounts()
+
+# Add custom authentication for an app
+toolset.add_auth(
+    app=App.GITHUB,
+    parameters=[
+        {
+            "in_": "header",
+            "name": "Authorization",
+            "value": "Bearer your-token",
+        }
+    ]
+)
+
+# Using the CLI to add a connected account
+# composio add github
+Sources: 
+python/composio/cli/add.py
+166-340
+ 
+python/composio/client/collections.py
+109-177
+ 
+python/tests/test_cli/test_add.py
+10-44
+
+Custom Actions
+You can define custom actions at runtime using the @action decorator:
+
+from composio.tools.base.runtime import action
+import typing_extensions as te
+
+@action(toolname="math")
+def add(
+    a: te.Annotated[int, "First number"],
+    b: te.Annotated[int, "Second number"],
+) -> te.Annotated[int, "Sum of the two numbers"]:
+    """Add two numbers"""
+    return a + b
+
+# Execute the custom action
+result = toolset.execute_action(
+    action=add,
+    params={"a": 1, "b": 2}
+)
+print(result["data"]["result"])  # 3
+Sources: 
+python/composio/tools/base/runtime.py
+58-464
+ 
+python/tests/test_tools/test_base/test_runtime.py
+42-71
+
+Workspaces
+Workspaces provide execution environments for running actions. The SDK supports different types of workspaces:
+
+Host Workspace: Runs actions on the host machine
+Docker Workspace: Runs actions in a Docker container
+E2B Workspace: Runs actions in a sandboxed environment
+Fly.io Workspace: Runs actions on the Fly.io platform
+from composio.tools.env.factory import WorkspaceFactory, HostWorkspaceConfig
+
+# Create a host workspace
+config = HostWorkspaceConfig(
+    shell_path="/bin/bash",
+    workspace_dir="/tmp/composio-workspace",
+)
+workspace = WorkspaceFactory.create(config=config)
+
+# Set up the workspace
+workspace.setup()
+
+# Execute an action in the workspace
+result = workspace.execute_action(
+    action=Action.SHELLTOOL_EXEC_COMMAND,
+    params={"command": "ls -la"},
+    metadata={}
+)
+
+# Tear down the workspace
+workspace.teardown()
+Sources: 
+python/composio/tools/toolset.py
+773-789
+ 
+python/setup.py
+58-70
+
+Framework Integrations
+The SDK integrates with various AI frameworks through dedicated plugins:
+
+LangChain Integration
+from composio_langchain import ComposioToolSet
+from langchain.agents import initialize_agent, AgentType
+from langchain.chat_models import ChatOpenAI
+
+# Create a toolset
+toolset = ComposioToolSet()
+
+# Get LangChain tools
+tools = toolset.get_tools(
+    actions=[
+        Action.GITHUB_LIST_REPOSITORIES,
+        Action.GMAIL_SEND_EMAIL,
+    ]
+)
+
+# Create a LangChain agent
+llm = ChatOpenAI(temperature=0)
+agent = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True,
+)
+
+# Run the agent
+agent.run("List my GitHub repositories and send an email with the results")
+Sources: 
+python/plugins/langchain/setup.py
+10-33
+ 
+python/tests/test_tools/test_toolset.py
+276-294
+
+OpenAI Integration
+from composio_openai import ComposioToolSet
+from openai import OpenAI
+
+# Create a toolset
+toolset = ComposioToolSet()
+
+# Get OpenAI tools
+tools = toolset.get_tools(
+    actions=[
+        Action.GITHUB_LIST_REPOSITORIES,
+        Action.GMAIL_SEND_EMAIL,
+    ]
+)
+
+# Create an OpenAI client
+client = OpenAI()
+
+# Create an assistant with the tools
+assistant = client.beta.assistants.create(
+    name="GitHub and Gmail Assistant",
+    instructions="Help the user with GitHub and Gmail tasks",
+    tools=tools,
+    model="gpt-4-turbo",
+)
+Sources: 
+python/plugins/openai/setup.py
+10-27
+
+Other Framework Integrations
+Similar integrations exist for:
+
+AutoGen: composio_autogen
+LlamaIndex: composio_llamaindex
+CrewAI: composio_crewai
+Claude: composio_claude
+Camel: composio_camel
+Griptape: composio_griptape
+Lyzr: composio_lyzr
+Julep: composio_julep
+Sources: 
+python/plugins/autogen/setup.py
+10-33
+ 
+python/plugins/llamaindex/setup.py
+10-30
+ 
+python/plugins/crewai/setup.py
+10-31
+ 
+python/plugins/claude/setup.py
+10-27
+ 
+python/plugins/camel/setup.py
+10-31
+ 
+python/plugins/griptape/setup.py
+10-27
+ 
+python/plugins/lyzr/setup.py
+10-32
+ 
+python/plugins/julep/setup.py
+10-27
+
+Triggers and Events
+The SDK provides functionality for setting up triggers and handling events:
+
+from composio import Trigger
+
+# Create a trigger listener
+listener = toolset.create_trigger_listener()
+
+# Define a callback function for GitHub events
+@listener.callback(filters={"app_name": "GITHUB"})
+def on_github_event(event):
+    print(f"Received GitHub event: {event.payload}")
+
+# Define a callback function for Gmail events
+@listener.callback(filters={"app_name": "GMAIL"})
+def on_gmail_event(event):
+    print(f"Received Gmail event: {event.payload}")
+
+# Start listening
+listener.wait_forever()
+To enable a trigger using the CLI:
+
+composio triggers enable GITHUB_COMMIT_EVENT
+Sources: 
+python/composio/client/collections.py
+548-790
+ 
+python/composio/cli/triggers.py
+146-185
+ 
+python/tests/test_client/test_collections.py
+63-122
+
+Advanced Features
+Request and Response Processors
+You can define processors to modify requests before they're sent and responses before they're returned:
+
+def preprocess_github(request: dict) -> dict:
+    # Modify the request before it's sent
+    return request
+
+def postprocess_github(response: dict) -> dict:
+    # Modify the response before it's returned
+    return response
+
+toolset = ComposioToolSet(
+    processors={
+        "pre": {App.GITHUB: preprocess_github},
+        "post": {App.GITHUB: postprocess_github},
+    }
+)
+Sources: 
+python/composio/tools/toolset.py
+247-381
+ 
+python/tests/test_tools/test_toolset.py
+205-294
+
+File Handling
+The SDK provides helpers for handling file uploads and downloads:
+
+from composio.client.files import FileUploadable, FileDownloadable
+
+# Upload a file
+file = FileUploadable.from_path(
+    file="/path/to/file.txt",
+    client=toolset.client,
+    action=Action.GITHUB_CREATE_FILE.slug,
+    app="GITHUB",
+)
+
+# Download a file
+file_download = FileDownloadable(
+    name="file.txt",
+    mimetype="text/plain",
+    s3url="https://example.com/file.txt",
+)
+local_path = file_download.download(outdir="/tmp/downloads")
+Sources: 
+python/composio/client/files.py
+1-112
+ 
+python/composio/tools/toolset.py
+701-789
+
+Error Handling
+The SDK provides a comprehensive set of exceptions for handling different error scenarios:
+
+from composio.exceptions import (
+    ComposioSDKError,             # Base class for all SDK errors
+    ApiKeyNotProvidedError,       # API key not provided
+    ConnectedAccountNotFoundError, # No connected account found for an app
+    SchemaError,                  # Error processing tool schema
+    InvalidParams,                # Invalid parameters
+    SDKTimeoutError,              # Timeout error
+)
+
+try:
+    toolset.execute_action(Action.GITHUB_LIST_REPOSITORIES, {})
+except ApiKeyNotProvidedError:
+    print("Please provide an API key")
+except ConnectedAccountNotFoundError:
+    print("Please connect to GitHub first: composio add github")
+except ComposioSDKError as e:
+    print(f"Error: {e.message}")
+Sources: 
+python/composio/exceptions.py
+1-253
+ 
+python/tests/test_tools/test_toolset.py
+105-122
+
+Command Line Integration
+The SDK integrates with the Composio CLI, providing a programmatic interface to CLI commands:
+
+from composio.cli.add import add_integration
+from composio.cli.context import Context
+
+# Create a context
+context = Context()
+
+# Add an integration
+add_integration(
+    name="github",
+    context=context,
+    no_browser=True,
+)
+Sources: 
+python/composio/cli/add.py
+166-340
+ 
+python/tests/test_cli/test_add.py
+10-44
+
+Summary
+The Python SDK provides a powerful interface for integrating Composio's tools and actions into Python applications. With its extensive framework integrations, you can easily connect your AI models to a wide variety of external services. The SDK handles authentication, tool execution, and event handling, providing a seamless experience for developers.

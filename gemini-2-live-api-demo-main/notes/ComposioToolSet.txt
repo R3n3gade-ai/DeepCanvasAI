@@ -1,0 +1,680 @@
+ComposioToolSet
+Relevant source files
+ComposioToolSet is the core interface class for interacting with Composio's tool ecosystem. It serves as the central orchestration layer that connects language models to external tools, actions, APIs, and execution environments. This class enables developers to retrieve tool schemas, execute actions, handle authentication, process requests/responses, and manage workspaces for secure tool execution.
+
+For framework-specific implementations, see Framework Integrations.
+
+1. Architecture Overview
+The ComposioToolSet connects multiple subsystems within the Composio platform:
+
+ComposioToolSet
+
++ProcessorHelper processor_helper
+
++FileIOHelper file_helper
+
++SchemaHelper schema_helper
+
++CustomAuthHelper auth_helper
+
++VersionLock version_lock
+
++Workspace workspace
+
++getToolsSchema()
+
++executeAction()
+
++addAuthConfig()
+
++addPreProcessor()
+
++addPostProcessor()
+
++addSchemaProcessor()
+
++createTriggerListener()
+
+Entity
+
++execute()
+
++getConnection()
+
++setupTrigger()
+
++enableTrigger()
+
++disableTrigger()
+
++getActiveTriggers()
+
++initiateConnection()
+
+«abstract»
+
+Workspace
+
++setup()
+
++teardown()
+
++executeAction()
+
++checkForMissingDependencies()
+
+ProcessorHelper
+
++processRequest()
+
++processResponse()
+
++processSchemaProperties()
+
+FileIOHelper
+
++writeOutput()
+
++writeDownloadable()
+
+SchemaHelper
+
++getActionSchemas()
+
++getRemoteActionSchemas()
+
++getLocalActionSchemas()
+
++getRuntimeActionSchemas()
+
++substituteFileUploads()
+
++substituteFileDownloads()
+
+CustomAuthHelper
+
++add()
+
++getCustomParamsForLocalExecution()
+
++getCustomParamsForRemoteExecution()
+
++hasCustomAuth()
+
+VersionLock
+
++apply()
+
++get()
+
++lock()
+
++update()
+
+Sources: 
+python/composio/tools/toolset.py
+90-192
+ 
+python/composio/tools/toolset.py
+247-387
+ 
+python/composio/tools/toolset.py
+390-455
+ 
+python/composio/tools/toolset.py
+458-783
+ 
+python/composio/tools/toolset.py
+789-870
+
+2. Initialization and Configuration
+ComposioToolSet can be instantiated with various configuration options:
+
+ComposioToolSet Initialization
+
+API Configuration
+
+Workspace Configuration
+
+Processor Configuration
+
+Schema Configuration
+
+api_key
+
+entity_id
+
+connected_account_ids
+
+workspace (Custom Workspace)
+
+workspace_config (HostWorkspaceConfig)
+
+processors (pre/post/schema)
+
+metadata
+
+description_char_limit
+
+action_name_char_limit
+
+2.1 Constructor Parameters
+Parameter	Type	Description
+api_key	str	Optional API key for Composio. If not provided, falls back to environment variable
+entity_id	str	Entity ID for execution context
+workspace	Workspace	Custom workspace instance for action execution
+workspace_config	WorkspaceConfigType	Configuration for default workspace
+processors	ProcessorsType	Dictionary of pre/post/schema processors by action type
+metadata	MetadataType	Dictionary of metadata by action type
+description_char_limit	int	Character limit for action descriptions
+action_name_char_limit	int	Character limit for action names
+runtime	str	Runtime identifier
+connected_account_ids	Dict[AppType, str]	Dictionary mapping apps to connected account IDs
+Sources: 
+python/composio/tools/toolset.py
+892-1013
+ 
+python/tests/test_tools/test_toolset.py
+154-190
+
+3. Core Functionality
+3.1 Tool Schema Retrieval
+ComposioToolSet provides methods to retrieve schemas for actions, which describe the capabilities, parameters, and expected responses of each tool:
+
+"ActionRegistry"
+"Composio API"
+SchemaHelper
+"ComposioToolSet"
+"LLM/Agent"
+"ActionRegistry"
+"Composio API"
+SchemaHelper
+"ComposioToolSet"
+"LLM/Agent"
+getToolsSchema(actions)
+get_action_schemas(actions)
+get_remote_actions_schemas()
+client.actions.get()
+remote action schemas
+get_local_action_schemas()
+Access local actions
+local action schemas
+get_runtime_action_schemas()
+Access runtime actions
+runtime action schemas
+processed schemas
+Process for target format
+Formatted tool schemas
+The get_action_schemas() method retrieves schemas from three sources:
+
+Remote actions (from Composio API)
+Local actions (built-in tools like file operations and shell commands)
+Runtime actions (dynamically registered at runtime)
+Sources: 
+python/composio/tools/toolset.py
+458-636
+ 
+python/composio/tools/base/abs.py
+94-394
+
+3.2 Action Execution
+The execute_action() method executes actions with provided parameters. It handles different types of actions:
+
+Runtime Action
+
+Local Action
+
+Remote Action
+
+execute_action(action, params)
+
+Action type?
+
+Execute in runtime context
+
+Execute in local context
+
+Execute via API
+
+Return response
+
+Check connected account
+
+Pre-process request
+
+Call API
+
+Post-process response
+
+Process parameters
+
+Execute in workspace
+
+Validate dependencies
+
+Process parameters
+
+Execute in workspace
+
+Sources: 
+python/composio/tools/toolset.py
+1370-1681
+ 
+python/tests/test_tools/test_toolset.py
+359-363
+
+3.3 Authentication Configuration
+ComposioToolSet provides methods to configure authentication for different tools:
+
+# Adding API key authentication for a tool
+toolset.add_auth(
+    app="SERPAPI",
+    parameters=[
+        {
+            "in_": "header",
+            "name": "Authorization",
+            "value": "Bearer api-key"
+        }
+    ]
+)
+Authentication configuration is used during action execution to properly authenticate with external services.
+
+Sources: 
+python/composio/tools/toolset.py
+789-870
+ 
+python/tests/test_tools/test_toolset.py
+389-441
+ 
+python/composio/cli/add.py
+166-338
+
+3.4 Request/Response Processing
+ComposioToolSet allows adding pre-processors and post-processors to modify requests before they're sent and responses before they're returned:
+
+"API Service"
+"ProcessorHelper"
+"ComposioToolSet"
+"LLM Agent"
+"API Service"
+"ProcessorHelper"
+"ComposioToolSet"
+"LLM Agent"
+execute_action(action, params)
+process_request(action, params)
+Apply app-level pre-processor
+Apply action-level pre-processor
+Modified request
+Call API with modified request
+Response data
+process_response(action, response)
+Apply app-level post-processor
+Apply action-level post-processor
+Modified response
+Return modified response
+Sources: 
+python/composio/tools/toolset.py
+247-387
+ 
+python/tests/test_tools/test_toolset.py
+205-293
+
+4. Helper Classes
+The ComposioToolSet uses several helper classes to organize its functionality:
+
+4.1 ProcessorHelper
+Handles pre-processing of requests and post-processing of responses. It maintains a registry of processors and applies them based on the action and app type.
+
+Sources: 
+python/composio/tools/toolset.py
+247-387
+
+4.2 FileIOHelper
+Manages file operations for input and output, including:
+
+Writing action output to files
+Handling downloadable file content
+Converting file content to appropriate formats
+Sources: 
+python/composio/tools/toolset.py
+390-455
+ 
+python/composio/client/files.py
+1-44
+
+4.3 SchemaHelper
+Retrieves and processes action schemas from different sources:
+
+Remote actions from the Composio API
+Local actions from the local tool registry
+Runtime actions that are dynamically registered
+It also handles file upload/download substitution in schemas and requests.
+
+Sources: 
+python/composio/tools/toolset.py
+458-783
+
+4.4 CustomAuthHelper
+Manages custom authentication configurations for different apps, storing and retrieving auth parameters for both local and remote execution.
+
+Sources: 
+python/composio/tools/toolset.py
+789-870
+
+5. Workspaces
+ComposioToolSet supports different workspace types for execution environments:
+
+«abstract»
+
+Workspace
+
++setup()
+
++teardown()
+
++executeAction()
+
++checkForMissingDependencies()
+
+HostWorkspace
+
++shells: Shells
+
++browsers: Browsers
+
++filemanagers: FileManagers
+
++setup()
+
++teardown()
+
++executeAction()
+
+DockerWorkspace
+
++container_id: str
+
++setup()
+
++teardown()
+
++executeAction()
+
+E2BWorkspace
+
++session_id: str
+
++setup()
+
++teardown()
+
++executeAction()
+
+FlyIOWorkspace
+
++instance_id: str
+
++setup()
+
++teardown()
+
++executeAction()
+
+Workspaces provide isolated environments for executing actions, with different security and capability characteristics:
+
+Workspace Type	Description	Use Case
+HostWorkspace	Executes actions on the host machine	Default for local tools
+DockerWorkspace	Executes actions in a Docker container	Isolated execution
+E2BWorkspace	Executes actions in an E2B environment	Managed cloud execution
+FlyIOWorkspace	Executes actions on Fly.io	Distributed execution
+Sources: 
+python/composio/tools/toolset.py
+81-83
+ 
+python/composio/tools/env/base.py
+
+6. Integration with External Tools and Services
+ComposioToolSet connects to various external tools and services through actions:
+
+ComposioToolSet
+
+ActionRegistry
+
+Remote Actions
+
+Local Actions
+
+Runtime Actions
+
+API-based Services
+
+GitHub
+
+Gmail
+
+Slack
+
+Other API Services...
+
+File Tools
+
+Shell Tools
+
+Code Analysis
+
+Browser Tools
+
+Custom Tools
+
+composio.action decorator
+
+The system integrates with:
+
+API-based services via remote actions
+Local system resources via local tools
+Custom functionality via runtime actions (registered using the @action decorator)
+Sources: 
+python/composio/tools/base/abs.py
+28-36
+ 
+python/composio/tools/base/runtime.py
+117-196
+ 
+python/composio/client/enums/app.pyi
+10-324
+
+7. Advanced Features
+7.1 Trigger Listeners
+ComposioToolSet provides functionality to create trigger listeners for event-driven workflows:
+
+listener = toolset.create_trigger_listener()
+
+@listener.callback(filters={"app_name": "GITHUB"})
+def on_github_event(event):
+    print(f"Received event: {event.metadata.triggerName}")
+    
+listener.wait_forever()  # Listen for events indefinitely
+Triggers allow for reactive workflows based on external events such as:
+
+New emails in Gmail
+GitHub repository events
+Slack messages
+Calendar events
+And many others
+Sources: 
+python/composio/tools/toolset.py
+3112-3165
+ 
+python/composio/client/collections.py
+551-790
+
+7.2 Version Locking
+ComposioToolSet includes a version locking mechanism to ensure consistent action versions:
+
+# Apply version lock to actions
+actions = toolset.version_lock.apply(actions)
+
+# Lock specific action versions
+toolset.version_lock["GITHUB_CREATE_ISSUE"] = "1_0"
+toolset.version_lock.lock()  # Save to lock file
+Version locking helps ensure reproducible behavior across executions by pinning actions to specific versions.
+
+Sources: 
+python/composio/tools/toolset.py
+164-245
+
+8. Usage Examples
+8.1 Basic Usage
+from composio import Action
+from composio.tools import ComposioToolSet
+
+# Create toolset
+toolset = ComposioToolSet()
+
+# Get schemas for specific actions
+schemas = toolset.get_action_schemas(
+    actions=[Action.GITHUB_LIST_REPOSITORIES, Action.GMAIL_SEND_EMAIL]
+)
+
+# Execute an action
+result = toolset.execute_action(
+    action=Action.GITHUB_LIST_REPOSITORIES,
+    params={"visibility": "public"}
+)
+8.2 Adding Pre/Post Processors
+from composio import App, Action
+from composio.tools import ComposioToolSet
+
+def preprocess_github_request(request):
+    # Modify request before sending
+    request["per_page"] = 100
+    return request
+
+def postprocess_github_response(response):
+    # Process response after receiving
+    response["data"] = [repo for repo in response["data"] if not repo["archived"]]
+    return response
+
+toolset = ComposioToolSet()
+toolset.add_pre_processor(App.GITHUB, preprocess_github_request)
+toolset.add_post_processor(Action.GITHUB_LIST_REPOSITORIES, postprocess_github_response)
+
+# Pre/post processors will be applied automatically
+result = toolset.execute_action(
+    action=Action.GITHUB_LIST_REPOSITORIES,
+    params={}
+)
+Sources: 
+python/tests/test_tools/test_toolset.py
+29-42
+ 
+python/tests/test_tools/test_toolset.py
+205-293
+
+8.3 Custom Authentication
+from composio import App
+from composio.tools import ComposioToolSet
+
+toolset = ComposioToolSet()
+
+# Add custom authentication for an app
+toolset.add_auth(
+    app=App.SERPAPI,
+    parameters=[
+        {
+            "in_": "query",
+            "name": "api_key",
+            "value": "your_api_key_here"
+        }
+    ]
+)
+
+# Execute action using the configured authentication
+result = toolset.execute_action(
+    action=Action.SERPAPI_SEARCH,
+    params={"q": "composio ai tools"}
+)
+Sources: 
+python/tests/test_tools/test_toolset.py
+389-441
+
+9. Extension and Inheritance
+The ComposioToolSet is designed to be subclassed by framework-specific implementations:
+
+ComposioToolSet
+
++getToolsSchema()
+
++executeAction()
+
++addAuthConfig()
+
++addPreProcessor()
+
++addPostProcessor()
+
++addSchemaProcessor()
+
+OpenAIToolSet
+
++get_tools()
+
++handle_tool_call()
+
++to_openai_tools()
+
+LangChainToolSet
+
++get_tools()
+
++to_langchain_tool()
+
++to_langchain_tools()
+
+AutoGenToolSet
+
++get_tools()
+
++to_autogen_tool()
+
++to_autogen_tools()
+
+LlamaIndexToolSet
+
++get_tools()
+
++to_llamaindex_tool()
+
++to_llamaindex_tools()
+
+Each framework-specific implementation adapts the ComposioToolSet to work with the respective framework's tool/action system.
+
+Sources: 
+python/tests/test_tools/test_plugins.py
+35-145
+ 
+python/tests/test_tools/test_toolset.py
+532-590
+
+10. Error Handling
+ComposioToolSet provides comprehensive error handling for various scenarios:
+
+Error Type	Description	Handling
+ApiKeyNotProvidedError	No API key available	Check environment variable or provide directly
+ConnectedAccountNotFoundError	No connected account for an app	Connect account using composio add <app>
+InvalidParams	Invalid parameters provided	Check parameter names and types
+ProcessorError	Error in pre/post processor	Fix processor function logic
+ComposioSDKError	General SDK error	Check error message for details
+SDKTimeoutError	Operation timed out	Increase timeout or check network
+Sources: 
+python/composio/exceptions.py
+1-33
+ 
+python/tests/test_tools/test_toolset.py
+192-202
+ 
+python/tests/test_tools/test_toolset.py
+296-332
+
+Summary
+The ComposioToolSet serves as the foundation for Composio's tool integration capabilities, providing a unified interface for retrieving tool schemas, executing actions, managing authentication, and handling various execution environments. It is designed to be extended by framework-specific implementations and provides a rich set of features for working with both local and remote tools.

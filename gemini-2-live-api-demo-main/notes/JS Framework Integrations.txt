@@ -1,0 +1,443 @@
+JS Framework Integrations
+Relevant source files
+This page documents how to integrate Composio's JavaScript SDK with popular JavaScript AI frameworks. The JS Framework Integrations enable seamless tool usage across different AI frameworks by providing specialized classes that convert Composio tools into the specific formats required by each framework.
+
+For information about Python framework integrations, see Framework Integrations.
+
+Architecture Overview
+All JavaScript Framework Integrations extend the core ComposioToolSet class, which provides the foundation for retrieving tool schemas, executing actions, and managing authentication. Each framework integration adapts Composio tools to the specific format and execution pattern expected by that framework.
+
+ComposioToolSet
+
++getToolsSchema()
+
++executeAction()
+
++createAction()
+
++addSchemaProcessor()
+
++addPreProcessor()
+
++addPostProcessor()
+
+OpenAIToolSet
+
++getTools()
+
++executeToolCall()
+
++handleToolCall()
+
++handleAssistantMessage()
+
++waitAndHandleAssistantToolCalls()
+
+VercelAIToolSet
+
++getTools()
+
++executeToolCall()
+
+LangchainToolSet
+
++getTools()
+
++_wrapTool()
+
+CloudflareToolSet
+
++getTools()
+
++executeToolCall()
+
++handleToolCall()
+
+LangGraphToolSet
+
+// Extends LangchainToolSet
+
+Sources:
+
+js/src/sdk/base.toolset.ts
+41-391
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/openai.ts
+14-279
+js/src/frameworks/cloudflare.ts
+18-154
+js/src/frameworks/langgraph.ts
+5-32
+Integration Flow
+The following diagram illustrates the common flow for tool integration and execution across all frameworks:
+
+"Composio API"
+"Composio Integration"
+"AI Framework"
+"Application"
+"Composio API"
+"Composio Integration"
+"AI Framework"
+"Application"
+Create agent with tools
+Request tools
+getToolsSchema()
+Tool schemas
+Convert to framework format
+Framework-specific tools
+Agent with tools ready
+Execute agent with user prompt
+Execute tool call
+executeAction()
+Action result
+Formatted result
+Response with tool results
+Sources:
+
+js/src/sdk/base.toolset.ts
+149-223
+ (getToolsSchema)
+js/src/sdk/base.toolset.ts
+241-348
+ (executeAction)
+Supported Frameworks
+OpenAI Integration
+The OpenAIToolSet class provides integration with OpenAI's Chat Completions and Assistants APIs. It handles both function calling and streaming assistant API interactions.
+
+import { OpenAIToolSet } from "composio-core";
+import { OpenAI } from "openai";
+
+const toolset = new OpenAIToolSet();
+const tools = await toolset.getTools({ actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"] });
+
+const client = new OpenAI();
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Get my GitHub username" }],
+  tools: tools,
+  tool_choice: "auto"
+});
+
+const result = await toolset.handleToolCall(response);
+console.log(result);
+Key methods:
+
+getTools(): Converts Composio tool schemas to OpenAI function tools
+executeToolCall(): Executes a specific tool call
+handleToolCall(): Processes tool calls from chat completions
+handleAssistantMessage(): Handles tool calls from the Assistants API
+waitAndHandleAssistantToolCalls(): Manages asynchronous tool execution with streaming
+Sources:
+
+js/src/frameworks/openai.ts
+14-279
+fern/getting-started/quickstart.mdx
+148-172
+Vercel AI SDK Integration
+The VercelAIToolSet class integrates with Vercel AI SDK. It handles the conversion of tools to Vercel AI SDK format and executes tool calls through Vercel's AI SDK interface.
+
+import { VercelAIToolSet } from "composio-core";
+import { tool } from "ai";
+
+const toolset = new VercelAIToolSet();
+const tools = await toolset.getTools({ actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"] });
+
+// Now use tools with Vercel AI SDK
+export default async function handler(req, res) {
+  // ... Vercel AI SDK setup
+  // tools can be directly used with the AI SDK
+}
+Key methods:
+
+getTools(): Converts Composio tools to Vercel AI SDK tools
+executeToolCall(): Executes tool calls from Vercel AI SDK
+generateVercelTool(): Internal method that wraps Composio tools in Vercel AI SDK format
+Sources:
+
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/vercel.spec.ts
+1-77
+LangChain Integration
+The LangchainToolSet class integrates with LangChain by converting Composio tools to LangChain's DynamicStructuredTool format.
+
+import { LangchainToolSet } from "composio-core";
+import { ChatOpenAI } from "@langchain/openai";
+import { initializeAgentExecutorWithOptions } from "langchain/agents";
+
+const toolset = new LangchainToolSet();
+const tools = await toolset.getTools({ actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"] });
+
+const model = new ChatOpenAI();
+const executor = await initializeAgentExecutorWithOptions(tools, model, {
+  agentType: "chat-conversational-react-description"
+});
+
+const result = await executor.call({ input: "Get my GitHub username" });
+Key methods:
+
+getTools(): Converts Composio tools to LangChain tools
+_wrapTool(): Internal method that wraps a Composio tool as a LangChain tool
+Sources:
+
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/langchain.spec.ts
+1-86
+Cloudflare Workers AI Integration
+The CloudflareToolSet class provides integration with Cloudflare Workers AI, enabling tool execution within Cloudflare's Workers environment.
+
+import { CloudflareToolSet } from "composio-core";
+import { Ai } from "@cloudflare/ai";
+
+const toolset = new CloudflareToolSet();
+const tools = await toolset.getTools({ actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"] });
+
+// In your Cloudflare Worker
+export default {
+  async fetch(request, env) {
+    const ai = new Ai(env.AI);
+    const { messages } = await request.json();
+    
+    const result = await ai.run('@cf/meta/llama-2-7b-chat-int8', {
+      messages,
+      tools: tools
+    });
+    
+    if (result.tool_calls) {
+      const toolResults = await toolset.handleToolCall(result);
+      // Process tool results...
+    }
+    
+    return new Response(JSON.stringify(result));
+  }
+};
+Key methods:
+
+getTools(): Converts Composio tools to Cloudflare Workers AI tools
+executeToolCall(): Executes individual tool calls
+handleToolCall(): Processes tool calls from Cloudflare AI responses
+Sources:
+
+js/src/frameworks/cloudflare.ts
+18-154
+js/src/frameworks/cloudflare.spec.ts
+1-37
+LangGraph Integration
+The LangGraphToolSet class extends the LangchainToolSet to provide integration with LangGraph. It inherits most functionality from the LangChain integration with minimal additional code specific to LangGraph.
+
+import { LangGraphToolSet } from "composio-core";
+
+const toolset = new LangGraphToolSet();
+const tools = await toolset.getTools({ actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"] });
+
+// Use tools with LangGraph
+// ...
+Sources:
+
+js/src/frameworks/langgraph.ts
+5-32
+Common Patterns and Features
+Configuration Options
+All framework integrations support the following configuration options:
+
+const toolset = new OpenAIToolSet({
+  apiKey: "your-composio-api-key",  // Optional: Defaults to env var COMPOSIO_API_KEY
+  baseUrl: "https://api.composio.dev",  // Optional: Custom API endpoint
+  entityId: "default",  // Optional: Entity ID for operations
+  connectedAccountIds: {  // Optional: Map of app names to connected account IDs
+    github: "github-account-id",
+    gmail: "gmail-account-id"
+  },
+  allowTracing: true  // Optional: Enable tracing for debugging
+});
+Sources:
+
+js/src/sdk/base.toolset.ts
+74-136
+Tool Filtering
+All integrations support filtering tool schemas by various criteria:
+
+const tools = await toolset.getTools({
+  actions: ["GITHUB_GET_THE_AUTHENTICATED_USER"],  // Specific actions
+  apps: ["github", "gmail"],  // Filter by apps
+  tags: ["important"],  // Filter by tags
+  useCase: "repository management",  // Filter by use case
+  useCaseLimit: 5,  // Limit number of tools per use case
+  filterByAvailableApps: true  // Only include available apps
+});
+Sources:
+
+js/src/sdk/base.toolset.ts
+149-223
+Custom Tool Creation
+All framework integrations support creating custom tools using the Zod schema library:
+
+import { z } from "zod";
+
+await toolset.createAction({
+  actionName: "customGreeting",
+  toolName: "custom",  // Optional: For authentication
+  description: "Generates a custom greeting",
+  inputParams: z.object({
+    name: z.string().describe("The name to greet"),
+    language: z.enum(["en", "es", "fr"]).describe("Language of the greeting")
+  }),
+  callback: async (params, authCredentials, executeRequest) => {
+    const { name, language } = params;
+    let greeting = "";
+    
+    switch (language) {
+      case "en": greeting = `Hello, ${name}!`; break;
+      case "es": greeting = `¡Hola, ${name}!`; break;
+      case "fr": greeting = `Bonjour, ${name}!`; break;
+    }
+    
+    return {
+      successful: true,
+      data: { greeting }
+    };
+  }
+});
+Sources:
+
+js/src/sdk/base.toolset.ts
+224-235
+js/src/sdk/actionRegistry.ts
+74-114
+js/src/frameworks/vercel.spec.ts
+31-75
+js/src/frameworks/langchain.spec.ts
+40-85
+Detailed Architecture
+The following diagram shows how the JS framework integrations fit into the larger Composio ecosystem:
+
+Composio Backend
+
+External AI Frameworks
+
+Composio JS SDK
+
+Application
+
+Core Components
+
+Framework Adapters
+
+User Code
+
+AI Frameworks
+(OpenAI, Vercel, etc.)
+
+ComposioToolSet
+(Base Class)
+
+OpenAIToolSet
+
+VercelAIToolSet
+
+LangchainToolSet
+
+CloudflareToolSet
+
+LangGraphToolSet
+
+ActionRegistry
+
+Processors
+(Schema/Pre/Post)
+
+Entity Management
+
+OpenAI API
+
+Vercel AI SDK
+
+LangChain
+
+Cloudflare Workers AI
+
+LangGraph
+
+Composio API
+
+Tool Registry
+
+Authentication
+
+Integrations
+
+Sources:
+
+js/src/sdk/base.toolset.ts
+41-391
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/openai.ts
+14-279
+js/src/frameworks/cloudflare.ts
+18-154
+js/src/frameworks/langgraph.ts
+5-32
+js/src/sdk/actionRegistry.ts
+59-224
+Feature Comparison
+The following table compares the features available in each framework integration:
+
+Feature	OpenAI	Vercel AI	LangChain	Cloudflare	LangGraph
+Tool Schema Conversion	✓	✓	✓	✓	✓
+Tool Execution	✓	✓	✓	✓	✓
+Custom Tool Creation	✓	✓	✓	✓	✓
+Assistants API Support	✓	-	-	-	-
+Streaming Support	✓	✓	-	-	-
+File Processing	✓	✓	✓	✓	✓
+Schema Processing	✓	✓	✓	✓	✓
+Sources:
+
+js/src/frameworks/openai.ts
+14-279
+js/src/frameworks/vercel.ts
+23-144
+js/src/frameworks/langchain.ts
+11-91
+js/src/frameworks/cloudflare.ts
+18-154
+js/src/frameworks/langgraph.ts
+5-32
+js/src/sdk/utils/processor/file.ts
+1-126
+Installation
+To use the JavaScript Framework Integrations, you need to install the composio-core package:
+
+npm install composio-core
+The package includes all framework integrations, and you can import the specific integration you need:
+
+// For OpenAI
+import { OpenAIToolSet } from "composio-core";
+
+// For Vercel AI SDK
+import { VercelAIToolSet } from "composio-core";
+
+// For LangChain
+import { LangchainToolSet } from "composio-core";
+
+// For Cloudflare Workers
+import { CloudflareToolSet } from "composio-core";
+
+// For LangGraph
+import { LangGraphToolSet } from "composio-core";
+Sources:
+
+fern/getting-started/installation.mdx
+44-68
+Conclusion
+JavaScript Framework Integrations provide a bridge between the Composio tooling ecosystem and popular JavaScript AI frameworks. By extending the base ComposioToolSet class, each integration adapts Composio tools to work seamlessly with a specific framework, allowing developers to easily incorporate powerful tool capabilities into their AI applications without managing complex authentication, schema conversion, or execution logic.
+
+For more information about specific tools available through these integrations, see the 
+Tools
+ section.

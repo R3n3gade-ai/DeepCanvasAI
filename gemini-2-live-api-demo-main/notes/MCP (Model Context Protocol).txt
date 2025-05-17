@@ -1,0 +1,297 @@
+MCP (Model Context Protocol)
+Relevant source files
+The Model Context Protocol (MCP) is a standardized communication protocol designed to connect AI client applications like Claude, Cursor, and Windsurf to server implementations that provide various capabilities. It acts as a bridge between these AI applications and external tools or services, enabling AI models to access and interact with external resources through a consistent interface. MCP is a key component of the Composio ecosystem, providing server-client integration capabilities for AI applications.
+
+This document covers the MCP protocol specification, the MCP CLI tool for setup and management, supported client integrations, and the communication transport layer.
+
+Architecture
+The MCP system follows a client-server architecture where AI applications (clients) connect to MCP servers that provide specific functionalities. The core communication protocol uses JSON-RPC over Server-Sent Events (SSE) for bidirectional communication.
+
+MCP System Architecture
+ExternalTools
+
+MCPSystem
+
+ClientApplications
+
+SSE/JSON-RPC
+
+SSE/JSON-RPC
+
+SSE/JSON-RPC
+
+Setup
+
+Setup
+
+Setup
+
+Claude Client
+
+Cursor Client
+
+Windsurf Client
+
+MCP CLI
+
+MCP Servers
+
+Code Analysis Tool
+
+Document Processing Tool
+
+API Integration Tool
+
+Sources: 
+README.md
+41-56
+ 
+README.md
+42-47
+
+Components
+MCP Clients
+AI applications that integrate with the MCP protocol:
+
+Claude: Anthropic's AI assistant
+Cursor: AI-assisted code editor
+Windsurf: Codeium's AI interface
+MCP Servers
+Server implementations that expose various capabilities through the MCP protocol. Composio provides over 100 fully-managed MCP servers with built-in authentication.
+
+MCP CLI
+A command-line tool for setting up and managing connections between clients and MCP servers. It handles configuration, authentication, and transport setup.
+
+Transport Layer
+Utilizes Server-Sent Events (SSE) for communication with JSON-RPC as the messaging format.
+
+Client Integrations
+MCP supports integration with several AI clients, each requiring specific configuration files to connect to MCP servers:
+
+Client	Description	Configuration Path
+Claude	Anthropic's Claude AI assistant	[baseDir]/Claude/claude_desktop_config.json
+Cursor	AI-assisted code editor	[homeDir]/.cursor/mcp.json
+Windsurf	Codeium's AI interface	[homeDir]/.codeium/windsurf/mcp_config.json
+The configuration paths use system-specific base directories:
+
+Windows: %APPDATA% for [baseDir] and user's home directory for [homeDir]
+macOS: ~/Library/Application Support for [baseDir] and user's home directory for [homeDir]
+Linux: ~/.config for [baseDir] and user's home directory for [homeDir]
+Sources: 
+mcp/src/cli/commands/setup.ts
+98-142
+ 
+mcp/src/cli/commands/setup.ts
+153-212
+
+Client Configuration
+Each client uses a slightly different configuration format:
+
+Claude: Uses a JSON configuration with mcpServers property that maps server URLs to connection details
+Windsurf: Similar to Claude, uses a JSON file with mcpServers mapping
+Cursor: Uses a simplified configuration format with just the URL property
+The configuration specifies how the client connects to the MCP server, including the command to execute, arguments, and environment variables.
+
+Sources: 
+mcp/src/cli/commands/setup.ts
+153-212
+
+Setup and Configuration
+The MCP CLI (@composio/mcp) provides commands for setting up and managing connections between clients and servers.
+
+Setup Command
+The setup command configures a client to connect to a specific MCP server:
+
+mcp setup <url> --client [claude|windsurf|cursor]
+This command:
+
+Creates or updates the appropriate configuration file for the specified client
+Configures the command and arguments needed for the client to connect to the MCP server
+Sets up any necessary environment variables
+Example configuration for Claude (in claude_desktop_config.json):
+
+{
+  "mcpServers": {
+    "https://example-server.com": {
+      "command": "npx",
+      "args": ["@composio/mcp@latest", "start", "--url", "https://example-server.com"],
+      "env": {
+        "npm_config_yes": "true"
+      }
+    }
+  }
+}
+Sources: 
+mcp/src/cli/commands/setup.ts
+42-82
+ 
+mcp/src/cli/commands/setup.ts
+84-213
+
+Start Command
+The start command initiates an MCP server connection:
+
+mcp start --url <server-url>
+This command:
+
+Establishes an SSE connection to the specified MCP server
+Creates a stdio server to handle local communication
+Bridges the SSE connection with stdio for bidirectional communication
+Forwards JSON-RPC messages between the client and server
+Sources: 
+mcp/src/cli/commands/start.ts
+23-97
+ 
+mcp/src/cli/commands/start.ts
+99-117
+
+Communication Protocol
+Message Flow
+The communication between clients, the MCP CLI bridge, and MCP servers follows this flow:
+
+"External Tool"
+"MCP Server"
+"MCP CLI Bridge"
+"AI Client"
+"External Tool"
+"MCP Server"
+"MCP CLI Bridge"
+"AI Client"
+"1. stdio message (JSON-RPC)"
+"2. Forward via SSE connection"
+"3. Invoke external tool"
+"4. Tool response"
+"5. SSE response"
+"6. stdio response (JSON-RPC)"
+Sources: 
+mcp/src/cli/commands/start.ts
+52-94
+ 
+mcp/src/utils/sseTransport.ts
+4-140
+
+JSON-RPC Message Format
+MCP uses JSON-RPC 2.0 for message formatting. Request and response messages follow this structure:
+
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "methodName",
+  "params": { /* parameters */ },
+  "id": 1
+}
+
+// Success Response
+{
+  "jsonrpc": "2.0",
+  "result": { /* result data */ },
+  "id": 1
+}
+
+// Error Response
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32000,
+    "message": "Error message"
+  },
+  "id": 1
+}
+Sources: 
+mcp/src/cli/commands/start.ts
+46-82
+
+Transport Architecture
+The MCP system uses a multi-layered transport architecture to enable communication between clients and servers:
+
+ServerSide
+
+MCPCliMiddleware
+
+ClientSide
+
+Write to stdin
+
+Read from stdout
+
+HTTP/SSE
+
+AI Application
+
+STDIO Client
+
+JSON-RPC Client Library
+
+sseToStdio Bridge Function
+
+SSEClientTransport Class
+
+MCP Client
+
+SSE Server Endpoint
+
+JSON-RPC Server
+
+Tool Method Handlers
+
+The transport layer includes robust error handling and reconnection logic:
+
+Automatic reconnection with exponential backoff (up to 30 seconds)
+Request retries for network-related errors
+Error propagation to the client for non-network errors
+Sources: 
+mcp/src/utils/sseTransport.ts
+4-140
+ 
+mcp/src/cli/commands/start.ts
+10-16
+ 
+mcp/src/cli/commands/start.ts
+24-97
+
+Using MCP with Clients
+To use MCP with supported clients:
+
+Install the MCP CLI:
+
+npm install -g @composio/mcp
+Configure a client to connect to an MCP server:
+
+mcp setup https://mcp.example.com --client claude
+Restart the client application to apply the changes
+
+The client will then have access to the capabilities provided by the MCP server
+
+Available Servers
+Composio provides managed MCP servers with built-in authentication for:
+
+Code analysis and generation
+Document processing
+API integrations
+Data retrieval and processing
+Sources: 
+README.md
+41-56
+ 
+mcp/src/cli/index.ts
+13-27
+
+Troubleshooting
+The MCP CLI includes detailed logging and error handling:
+
+Connection issues are logged with specific error codes and messages
+Automatic reconnection attempts with exponential backoff
+Detailed error messages are propagated to the client for debugging
+Process exit with appropriate exit codes for fatal errors
+If the client application isn't recognizing the MCP server, ensure:
+
+The configuration file is correctly formatted and in the right location
+The MCP CLI is properly installed and accessible
+The client has been restarted after configuration
+The MCP server URL is correct and accessible
+Sources: 
+mcp/src/utils/sseTransport.ts
+50-135
+ 
+mcp/src/cli/commands/start.ts
+64-82

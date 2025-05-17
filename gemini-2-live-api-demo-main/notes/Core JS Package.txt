@@ -1,0 +1,567 @@
+Core JS Package
+Relevant source files
+This page documents the JavaScript SDK Core package (composio-core) for Composio, which provides a set of tools and classes for integrating with the Composio platform from JavaScript/TypeScript environments. This package serves as the foundation for all JavaScript-based interactions with Composio services and integrations. For information about framework-specific integrations that build on this core package, see JS Framework Integrations.
+
+Overview and Purpose
+The composio-core package enables JavaScript applications to access the Composio platform's functionality, including:
+
+Executing actions across integrated services
+Managing connections to external applications
+Setting up event triggers
+Interacting with multiple AI frameworks
+The package is designed to work in both Node.js and browser environments, with appropriate polyfills and environment detection.
+
+Sources: 
+js/package.json
+1-117
+ 
+js/src/index.ts
+1-32
+
+Architecture
+creates
+
+Composio
+
++backendClient: AxiosBackendClient
+
++connectedAccounts: ConnectedAccounts
+
++apps: Apps
+
++actions: Actions
+
++triggers: Triggers
+
++integrations: Integrations
+
++activeTriggers: ActiveTriggers
+
++constructor(config)
+
++getEntity(id) : : Entity
+
++getExpectedParamsForUser(params) : : Promise
+
+Entity
+
++id: string
+
++backendClient: AxiosBackendClient
+
++execute(params) : : Promise
+
++getConnection(params) : : Promise
+
++setupTrigger(params) : : Promise
+
++disableTrigger(triggerId) : : Promise
+
++getConnections() : : Promise
+
++getActiveTriggers() : : Promise
+
++initiateConnection(data) : : Promise
+
+AxiosBackendClient
+
++apiKey: string
+
++baseUrl: string
+
++runtime: string
+
++instance: Client
+
++getClientId() : : Promise
+
+Actions
+
++get(data) : : Promise
+
++list(data) : : Promise
+
++execute(data) : : Promise
+
++findActionEnumsByUseCase(data) : : Promise
+
++executeRequest(data) : : Promise
+
+ConnectedAccounts
+
++list(data) : : Promise
+
++get(data) : : Promise
+
++delete(data) : : Promise
+
++disable(data) : : Promise
+
++enable(data) : : Promise
+
++initiate(payload) : : Promise
+
++reinitiateConnection(data) : : Promise
+
+Integrations
+
++list(data) : : Promise
+
++get(data) : : Promise
+
++create(data) : : Promise
+
++delete(data) : : Promise
+
+Triggers
+
++list(data) : : Promise
+
++get(data) : : Promise
+
++setup(params) : : Promise
+
++getTriggerInfo(data) : : Promise
+
+Sources: 
+js/src/sdk/index.ts
+1-320
+ 
+js/src/sdk/models/Entity.ts
+1-413
+ 
+js/src/sdk/models/actions.ts
+1-246
+ 
+js/src/sdk/models/connectedAccounts.ts
+1-289
+ 
+js/src/sdk/models/triggers.ts
+1-248
+ 
+js/src/sdk/models/integrations.ts
+1-190
+ 
+js/src/sdk/models/backendClient.ts
+1-100
+
+Installation and Setup
+The composio-core package can be installed via npm, yarn, or pnpm:
+
+npm install composio-core
+# or
+yarn add composio-core
+# or 
+pnpm add composio-core
+Peer Dependencies
+The package has several peer dependencies based on which frameworks you plan to integrate with:
+
+composio-core
+
+openai (>=4.50.0)
+
+langchain (>=0.2.11)
+
+@langchain/core (>=0.2.18)
+
+@langchain/openai (>=0.2.5)
+
+@ai-sdk/openai (>=0.0.36)
+
+ai (>=3.2.22)
+
+@cloudflare/workers-types (>=4.20240718.0)
+
+These peer dependencies allow the core package to integrate with various AI frameworks without requiring all of them to be installed.
+
+Sources: 
+js/package.json
+36-44
+
+Initialization and Configuration
+To start using the SDK, you need to initialize the Composio class with your API key and optional configuration:
+
+import { Composio } from 'composio-core';
+
+const composio = new Composio({
+  apiKey: 'your-api-key',  // Required
+  baseUrl: 'https://api.composio.dev',  // Optional, defaults to production URL
+  runtime: 'nodejs',  // Optional, helps with telemetry
+  allowTracing: true  // Optional, enables tracing
+});
+The SDK will look for an API key in the following order:
+
+Passed directly in the constructor
+Environment variable COMPOSIO_API_KEY
+User configuration file (in ~/.composio/user_data.json)
+Similarly, for the base URL, it checks:
+
+Passed directly in the constructor
+Environment variable COMPOSIO_BASE_URL
+User configuration file
+Default production URL
+Composio Backend
+Configuration System
+Composio SDK
+Application Code
+Composio Backend
+Configuration System
+Composio SDK
+Application Code
+new Composio({config})
+getSDKConfig()
+Check constructor params
+Check environment variables
+Check user config file
+Use defaults if necessary
+Return config
+Initialize ComposioSDKContext
+Create AxiosBackendClient
+Initialize models
+Check for latest version
+Return SDK instance
+Sources: 
+js/src/sdk/index.ts
+47-132
+ 
+js/src/sdk/utils/config.ts
+1-169
+
+Core Classes and Features
+Composio Class
+The Composio class is the main entry point to the SDK. It initializes all the necessary components and provides access to various services:
+
+class Composio {
+  backendClient: AxiosBackendClient;
+  connectedAccounts: ConnectedAccounts;
+  apps: Apps;
+  actions: Actions;
+  triggers: Triggers;
+  integrations: Integrations;
+  activeTriggers: ActiveTriggers;
+
+  constructor(config?: {
+    apiKey?: string;
+    baseUrl?: string;
+    runtime?: string;
+    allowTracing?: boolean;
+  });
+
+  getEntity(id?: string): Entity;
+  
+  getExpectedParamsForUser(params: {
+    app: string | null;
+    integrationId: string | null;
+    authScheme?: string;
+  }): Promise<{
+    expectedInputFields: any;
+    integrationId: string;
+    authScheme: string;
+  }>;
+}
+Sources: 
+js/src/sdk/index.ts
+33-320
+
+Entity Class
+The Entity class represents an entity within Composio. Entities can execute actions, manage connections, and interact with triggers:
+
+class Entity {
+  id: string;
+  
+  constructor(backendClient: AxiosBackendClient, id?: string);
+  
+  execute({
+    actionName,
+    params,
+    text,
+    connectedAccountId
+  }: ExecuteActionParams): Promise<ActionExecuteResponse>;
+  
+  getConnection({
+    app,
+    appName,
+    connectedAccountId
+  }: ConnectionParams): Promise<ConnectionItem>;
+  
+  setupTrigger({
+    app,
+    appName,
+    triggerName,
+    config
+  }: TriggerSubscribeParam): Promise<any>;
+  
+  disableTrigger(triggerId: string): Promise<{ status: string }>;
+  
+  getConnections(): Promise<ConnectionItem[]>;
+  
+  getActiveTriggers(): Promise<any>;
+  
+  initiateConnection(data: InitiateConnectionParams): Promise<ConnectionRequest>;
+}
+Sources: 
+js/src/sdk/models/Entity.ts
+44-413
+
+Actions
+The Actions class provides methods to list, get, and execute actions:
+
+class Actions {
+  constructor(backendClient: AxiosBackendClient, client: Client);
+  
+  get(data: ActionItemParam): Promise<ActionItemGetRes>;
+  
+  list(data?: ActionListParams): Promise<ActionItemListRes>;
+  
+  execute(data: ActionExecuteParam): Promise<ActionExecuteResponse>;
+  
+  findActionEnumsByUseCase(data: FindActionEnumsByUseCaseParam): Promise<ActionFindActionEnumsByUseCaseRes>;
+  
+  executeRequest(data: ActionExecuteReqParam): Promise<ActionExecuteResponse>;
+}
+When executing an action, the SDK handles authentication and validation automatically:
+
+Composio Backend
+Actions Class
+Entity Class
+Application
+Composio Backend
+Actions Class
+Entity Class
+Application
+execute({ actionName, params })
+get({ actionName })
+action details
+getConnection({ app: action.appKey })
+connectedAccount
+execute({ actionName, connectedAccountId, params })
+POST /api/v1/actions/{actionName}/execute
+action execution results
+results
+action results
+Sources: 
+js/src/sdk/models/actions.ts
+46-246
+
+Connected Accounts
+The ConnectedAccounts class handles all aspects of account connections to external services:
+
+class ConnectedAccounts {
+  constructor(backendClient: AxiosBackendClient, client: Client);
+  
+  list(data: ConnectedAccountsListData): Promise<ConnectedAccountListResponse>;
+  
+  get(data: SingleConnectionParam): Promise<SingleConnectedAccountResponse>;
+  
+  delete(data: SingleConnectionParam): Promise<SingleDeleteResponse>;
+  
+  disable(data: SingleConnectionParam): Promise<ConnectionChangeResponse>;
+  
+  enable(data: SingleConnectionParam): Promise<ConnectionChangeResponse>;
+  
+  initiate(payload: InitiateConnectionDataReq): Promise<ConnectionRequest>;
+  
+  reinitiateConnection(data: ReinitiateConnectionPayload): Promise<ConnectionRequest>;
+}
+The connection process typically involves an OAuth or similar flow:
+
+External Service
+Composio Backend
+ConnectedAccounts
+Entity Class
+Application
+External Service
+Composio Backend
+ConnectedAccounts
+Entity Class
+Application
+initiateConnection({ appName, authMode, ... })
+initiate({ appName, entityId, ... })
+POST /api/v1/connections/initiate
+connectionResponse (with redirectUri)
+ConnectionRequest object
+ConnectionRequest (with redirectUrl)
+Redirect user to authentication URL
+Authentication callback
+Redirect to application callback URL
+Complete connection flow
+Sources: 
+js/src/sdk/models/connectedAccounts.ts
+51-289
+
+Integrations
+The Integrations class manages integration configurations for connecting to external services:
+
+class Integrations {
+  constructor(backendClient: AxiosBackendClient, client: Client);
+  
+  list(data?: IntegrationListParam): Promise<IntegrationListRes>;
+  
+  get(data: IntegrationGetRequiredParam): Promise<IntegrationGetRes>;
+  
+  create(data: IntegrationCreateParams): Promise<IntegrationGetRes>;
+  
+  delete(data: IntegrationDeleteParam): Promise<IntegrationDeleteRes>;
+}
+Sources: 
+js/src/sdk/models/integrations.ts
+50-211
+
+Triggers
+The Triggers class manages event triggers from external services:
+
+class Triggers {
+  constructor(backendClient: AxiosBackendClient, client: Client);
+  
+  list(data?: TriggerListParam): Promise<TriggerListResponse>;
+  
+  get(data: TriggerSingleParam): Promise<SingleTriggerRes>;
+  
+  setup(params: TriggerSetupParam): Promise<TriggerSetupResponse>;
+  
+  getTriggerInfo(data: TriggerSingleParam): Promise<SingleTriggerRes>;
+}
+Sources: 
+js/src/sdk/models/triggers.ts
+59-232
+
+Error Handling
+The SDK includes a robust error handling system that provides detailed error information and standardized error codes:
+
+ComposioError
+
+AxiosError
+
+ZodError
+
+Other
+
+Error object
+
+Error Type?
+
+Return as-is
+
+Format API error
+
+Format validation error
+
+Create generic error
+
+Create ComposioError
+
+Log error to telemetry
+
+The ComposioError class provides detailed information about errors:
+
+class ComposioError extends Error {
+  name: string;
+  message: string;
+  errCode: string;
+  errorId: string;
+  description: string;
+  possibleFix: string;
+  metadata?: Record<string, unknown>;
+}
+Error codes are standardized across the SDK:
+
+// Example error codes
+COMPOSIO_SDK_ERROR_CODES = {
+  COMMON: {
+    API_KEY_UNAVAILABLE: "COMPOSIO_E_COMMON_001",
+    BASE_URL_NOT_REACHABLE: "COMPOSIO_E_COMMON_002",
+    INVALID_PARAMS_PASSED: "COMPOSIO_E_COMMON_003"
+  },
+  BACKEND: {
+    BAD_REQUEST: "COMPOSIO_E_BACKEND_001",
+    UNAUTHORIZED: "COMPOSIO_E_BACKEND_002",
+    NOT_FOUND: "COMPOSIO_E_BACKEND_004"
+  },
+  SDK: {
+    NO_CONNECTED_ACCOUNT_FOUND: "COMPOSIO_E_SDK_001",
+    UNKNOWN_ERROR: "COMPOSIO_E_SDK_002"
+  }
+}
+Sources: 
+js/src/sdk/utils/error.ts
+1-166
+ 
+js/src/sdk/utils/errors/src/formatter.ts
+1-127
+
+Logging and Telemetry
+The SDK includes a configurable logging system and optional telemetry:
+
+Logging
+The logging system supports multiple log levels (silent, error, warn, info, debug) which can be set via the COMPOSIO_LOGGING_LEVEL environment variable:
+
+// Example log output
+logger.info("Initializing Composio with API Key: [REDACTED]");
+logger.debug("API Request details", { method: "GET", url: "/api/v1/apps" });
+logger.error("Failed to connect to service", error);
+Sources: 
+js/src/utils/logger.ts
+1-69
+
+Telemetry
+The SDK collects anonymous usage data to help improve the platform. This can be disabled by setting the TELEMETRY_DISABLED environment variable to true:
+
+// Telemetry is automatically sent for key operations
+TELEMETRY_LOGGER.manualTelemetry(TELEMETRY_EVENTS.SDK_METHOD_INVOKED, {
+  method: "execute",
+  file: this.fileName,
+  params: { /* params */ }
+});
+Sources: 
+js/src/sdk/utils/telemetry/index.ts
+1-68
+ 
+js/src/utils/external.ts
+1-123
+
+Environment Support
+The SDK is designed to work in both Node.js and browser environments:
+
+// Browser compatibility configuration in package.json
+"browser": {
+  "fs": false,
+  "os": false,
+  "path": false,
+  "child_process": false
+}
+For browser environments, certain Node.js-specific features are automatically disabled, and alternative implementations are provided. The package includes appropriate polyfills and environment detection to ensure functionality across different platforms.
+
+Sources: 
+js/package.json
+6-11
+
+CLI Support
+The package includes a command-line interface (CLI) for various operations:
+
+"bin": {
+  "composio-js": "./dist/cli/index",
+  "composio": "./dist/cli/index"
+}
+While the CLI details aren't covered in this document, it's worth noting that the same core package provides both programmatic and command-line interfaces.
+
+Sources: 
+js/package.json
+26-29
+
+Framework Compatibility
+The core package is designed to be used with various JavaScript AI frameworks as indicated by its peer dependencies:
+
+Framework	Required Version	Integration Class
+OpenAI	>=4.50.0	OpenAIToolSet
+LangChain	>=0.2.11	LangchainToolSet
+Vercel AI	>=3.2.22	VercelAIToolSet
+Cloudflare	>=4.20240718.0	CloudflareToolSet
+LangGraph	-	LangGraphToolSet
+Each framework integration builds on the core functionality while providing framework-specific features. For more details on these integrations, see JS Framework Integrations.
+
+Sources: 
+js/package.json
+36-44
+ 
+js/src/index.ts
+1-32

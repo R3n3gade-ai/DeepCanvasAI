@@ -1,0 +1,76 @@
+Using Composio With Google AI
+
+
+Copy page
+
+Composio enables your Google AI models to connect with many tools!
+
+Install Packages & Connect a Tool
+Goal: Enable Google AI models to perform tasks like starring a repository on GitHub via natural language commands
+
+These steps prepare your environment to enable interactions between Google AI and GitHub through Composio.
+
+Run Command
+
+pip install composio-google
+# Connect your GitHub so models can interact with it
+composio add github
+# Check all supported apps
+composio apps
+1
+Import Base Packages & Initialize Google AI Model
+Replace {google_api_key} with your actual API key.
+
+Default Imports & Configuration
+
+import dotenv
+from composio_google import App, ComposioToolset
+from vertexai.generative_models import GenerativeModel
+# Load environment variables from .env
+dotenv.load_dotenv()
+# Initialize the Composio Toolset
+composio_toolset = ComposioToolset()
+# Get GitHub tools that are pre-configured
+tool = composio_toolset.get_tool(apps=[App.GITHUB])
+# Initialize the Google AI Gemini model
+model = GenerativeModel("gemini-1.5-pro", tools=[tool])
+2
+Start a Chat Session with the Model
+Start Chat Session
+
+# Start a chat session
+chat = model.start_chat()
+3
+Execute the Task via Google AI Model
+Execute Task
+
+# Define task
+task = "Star a repo composiohq/composio on GitHub"
+# Send a message to the model
+response = chat.send_message(task)
+print("Model response:")
+print(response)
+4
+Handle the Tool Calls
+Handle Tool Calls
+
+result = composio_toolset.handle_response(response)
+print("Function call result:")
+print(result)
+Use Specific Actions
+Filter Specific Action
+
+# To restrict models from executing any actions, filter specific actions 
+actions = composio_toolset.get_tool(actions=[Action.GITHUB_CREATE_ISSUE]) 
+Use Specific Apps
+Filter Specific App
+
+# To restrict models from using all tools, filter specific tools 
+actions = composio_toolset.get_tool(apps=[App.ASANA, App.GITHUB]) 
+Filter apps actions by tags
+Filter Actions by Tags
+
+actions = composio_toolset.get_tool(apps=[App.ASANA], tags=[Tag.ASANA_TASKS]) 
+Was this page helpful?
+Yes
+No

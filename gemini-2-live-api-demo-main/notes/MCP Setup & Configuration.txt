@@ -1,0 +1,332 @@
+MCP Setup & Configuration
+Relevant source files
+This document provides a comprehensive guide for setting up and configuring the Model Context Protocol (MCP) system, which enables integration between various AI clients and Composio's toolset. MCP allows AI assistants like Claude, Windsurf, and Cursor to access and use Composio's capabilities.
+
+Introduction to MCP
+The Model Context Protocol (MCP) serves as a bridge between AI client applications and Composio's tools and actions ecosystem. It provides a standardized communication layer that enables AI assistants to leverage Composio's capabilities without requiring direct integration with each client.
+
+Uses
+
+Executes
+
+Provides
+
+Displays Results to
+
+AI Client
+
+MCP Server
+
+Composio SDK
+
+Composio Tools & Actions
+
+End User
+
+Sources: 
+mcp/src/cli/commands/setup.ts
+1-216
+ 
+mcp/src/cli/commands/start.ts
+1-118
+
+MCP Architecture Overview
+MCP uses a client-server architecture with Server-Sent Events (SSE) as the primary transport mechanism. The system consists of:
+
+MCP CLI Tool: Command-line utility for setup and configuration
+MCP Server: Bridge between AI clients and Composio
+Client Configurations: Platform-specific configuration files for each supported client
+Transport Layer: SSE-based JSON-RPC communication protocol
+Composio SDK
+
+MCP System
+
+setup
+
+read by
+
+connects to
+
+communicates with
+
+executes via
+
+utilizes
+
+provides
+
+Client Applications
+
+Claude Desktop
+
+Windsurf (Codeium)
+
+Cursor Editor
+
+MCP CLI
+
+MCP Server
+
+SSE Transport
+
+Composio Core
+
+ToolSets
+
+Actions API
+
+Client Configurations
+
+AI Clients
+
+Sources: 
+mcp/src/cli/commands/setup.ts
+1-216
+ 
+mcp/src/utils/sseTransport.ts
+1-141
+
+Installing MCP
+The MCP tooling is available as an npm package that can be installed globally or used via npx:
+
+# Install globally
+npm install -g @composio/mcp
+
+# Or use without installing
+npx @composio/mcp <command>
+The package provides a CLI tool with commands for setting up and running the MCP server.
+
+Sources: 
+mcp/package.json
+1-67
+ 
+mcp/package.dist.json
+1-32
+
+Client Configuration
+MCP supports three AI clients:
+
+Claude: Anthropic's AI assistant desktop application
+Windsurf: Codeium's AI coding assistant
+Cursor: AI-powered code editor
+The configuration process varies slightly for each client but follows the same general pattern.
+
+Configuration Locations
+MCP stores configuration files in platform-specific locations:
+
+Client	Windows	macOS	Linux
+Claude	%APPDATA%\Claude\	~/Library/Application Support/Claude/	~/.config/Claude/
+Windsurf	%APPDATA%.codeium\windsurf\	~/.codeium/windsurf/	~/.codeium/windsurf/
+Cursor	%APPDATA%.cursor\	~/.cursor/	~/.cursor/
+Configuration File Formats
+Each client uses a slightly different configuration format:
+
+Claude
+File: claude_desktop_config.json
+
+{
+  "mcpServers": {
+    "https://your-mcp-url": {
+      "command": "npx",
+      "args": ["@composio/mcp@latest", "start", "--url", "https://your-mcp-url"],
+      "env": {
+        "npm_config_yes": "true"
+      }
+    }
+  }
+}
+Windsurf
+File: mcp_config.json
+
+{
+  "mcpServers": {
+    "https://your-mcp-url": {
+      "command": "npx",
+      "args": ["@composio/mcp@latest", "start", "--url", "https://your-mcp-url"],
+      "env": {
+        "npm_config_yes": "true"
+      }
+    }
+  }
+}
+Cursor
+File: mcp.json
+
+{
+  "mcpServers": {
+    "your-mcp-url-transformed": {
+      "url": "https://your-mcp-url"
+    }
+  }
+}
+Sources: 
+mcp/src/cli/commands/setup.ts
+83-213
+
+Setting Up MCP
+The MCP CLI provides a setup command to configure clients:
+
+npx @composio/mcp setup <url> --client=<client-type>
+Where:
+
+<url> is the URL to your MCP server instance
+<client-type> is one of: claude, windsurf, or cursor
+Setup Process Flow
+"AI Client"
+"Client Config"
+"MCP CLI"
+"User"
+"AI Client"
+"Client Config"
+"MCP CLI"
+"User"
+"mcp setup <url> --client=<type>"
+"Determine platform-specific paths"
+"Write configuration file"
+"Display success message"
+"Restart client application"
+"Read MCP configuration"
+"Connect to MCP server"
+Sources: 
+mcp/src/cli/commands/setup.ts
+41-82
+
+Setup Command Implementation
+The setup command performs the following operations:
+
+Validates the input parameters
+Determines the appropriate configuration file path based on client and platform
+Creates or updates the configuration file with MCP server information
+Displays a success message with instructions to restart the client
+The implementation details can be found in 
+mcp/src/cli/commands/setup.ts
+41-82
+
+Starting the MCP Server
+The MCP server can be started manually using the start command:
+
+npx @composio/mcp start --url=<url>
+Where <url> is the URL to connect to (typically a Composio server endpoint).
+
+Server Process Flow
+"Composio API"
+"SSE Transport"
+"MCP Server"
+"AI Client"
+"Composio API"
+"SSE Transport"
+"MCP Server"
+"AI Client"
+"Initialize connection"
+"Establish SSE connection"
+"Connect to Composio endpoint"
+"Send JSON-RPC request"
+"Forward request"
+"Execute action"
+"Return results"
+"Process response"
+"Send JSON-RPC response"
+Sources: 
+mcp/src/cli/commands/start.ts
+23-97
+ 
+mcp/src/utils/sseTransport.ts
+4-140
+
+Error Handling and Reconnection
+MCP implements robust error handling with automatic retries and reconnection:
+
+Success
+
+Failure
+
+Retry limit exceeded
+
+Retry attempt
+
+Success
+
+Network error
+
+Retry limit exceeded
+
+Retry attempt
+
+Start MCP server
+
+Establish connection
+
+Server ready
+
+Retry connection
+
+Connection failed
+
+Process client request
+
+Return response
+
+Retry request
+
+Request failed
+
+Reconnect
+
+Key error handling features:
+
+Connection retries with exponential backoff (up to 5 attempts)
+Request retries for network-related failures (up to 3 attempts)
+Automatic reconnection after connection loss
+Detailed error reporting
+Sources: 
+mcp/src/utils/sseTransport.ts
+30-136
+
+Troubleshooting
+Common issues and their solutions:
+
+Connection Issues
+Problem: MCP server fails to connect to the Composio endpoint
+Solution: Verify the URL is correct and the endpoint is accessible
+Logs: Check error messages in the console for specific connection errors
+Configuration Issues
+Problem: Client fails to recognize or connect to MCP
+Solution: Ensure the configuration file is in the correct location and format
+Verification: Manually check the configuration file contents against the expected format
+Client Integration Issues
+Problem: Client starts MCP but doesn't receive responses
+Solution: Restart the client after MCP setup and verify the MCP server is running
+Sources: 
+mcp/src/cli/commands/setup.ts
+76-80
+ 
+mcp/src/utils/sseTransport.ts
+66-72
+
+Advanced Configuration
+For advanced scenarios, you can directly edit the client configuration files:
+
+Custom Environment Variables
+For Claude and Windsurf, you can add custom environment variables to the env object in the configuration:
+
+"env": {
+  "npm_config_yes": "true",
+  "CUSTOM_VAR": "value"
+}
+Multiple MCP Servers
+All supported clients can be configured with multiple MCP servers:
+
+"mcpServers": {
+  "https://mcp-server-1": { ... },
+  "https://mcp-server-2": { ... }
+}
+This allows AI clients to access multiple Composio instances with different capabilities.
+
+Sources: 
+mcp/src/cli/commands/setup.ts
+147-212
+
+Conclusion
+The MCP system provides a flexible and robust way to connect AI clients with Composio's tools and actions. By following the setup instructions in this document, you can enable Claude, Windsurf, or Cursor to use Composio's capabilities and enhance your AI assistant's functionality.
+
+To learn more about the broader MCP system and its integration with the AI client ecosystem, see MCP Overview.

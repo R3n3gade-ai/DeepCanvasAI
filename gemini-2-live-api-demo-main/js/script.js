@@ -9,6 +9,7 @@ import { setupEventListeners } from './dom/events.js';
 import { initCreationStudio } from './creation/creation-studio.js';
 import { secondMeIntegration } from './integrations/second-me-integration.js';
 import brainManager from './integrations/brain-manager.js';
+import { initializeConnectionHandlers } from './integrations/connection-handlers.js';
 
 const url = getWebsocketUrl();
 const config = getConfig();
@@ -68,22 +69,22 @@ async function initializeSecondMe() {
         try {
             // Initialize with the chat manager
             await secondMeIntegration.initialize({ chatManager });
-            
+
             if (secondMeIntegration.isActive()) {
                 console.log('Second-Me integration initialized successfully');
-                
+
                 // Get the enhanced chat manager (if Second-Me is enabled)
                 const enhancedChatManager = secondMeIntegration.getEnhancedChatManager();
-                
+
                 if (enhancedChatManager) {
                     console.log('Using Enhanced Chat Manager with Second-Me capabilities');
-                    
+
                     // Add any additional setup for the enhanced chat manager here
                     enhancedChatManager.addEventListener('error', (error) => {
                         console.error('Second-Me error:', error);
                     });
                 }
-                
+
                 // Initialize brain manager for Second-Me
                 await brainManager.initialize();
                 console.log('Brain Manager initialized for Second-Me integration');
@@ -96,11 +97,12 @@ async function initializeSecondMe() {
     }
 }
 
-// Initialize Creation Studio and Second-Me after DOM is fully loaded
+// Initialize Creation Studio, Second-Me, and Connections after DOM is fully loaded
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('DOM fully loaded, initializing components...');
     initCreationStudio();
     await initializeSecondMe();
+    initializeConnectionHandlers();
 });
 
 // Fallback in case DOMContentLoaded already fired
@@ -108,4 +110,5 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     console.log('DOM already loaded, initializing components...');
     initCreationStudio();
     initializeSecondMe();
+    initializeConnectionHandlers();
 }

@@ -1,0 +1,59 @@
+Introduction
+
+
+Copy page
+
+Composio is an integration and tooling platform built for AI agents and LLM applications that lets you:
+
+Add tool-use capabilities to your AI agent from 300+ apps.
+Give agents authenticated access to tools.
+Listen and trigger agents and workflows from external events (e.g., new Slack message, GitHub issue).
+Customize tools for proprietary APIs or specific functions.
+Seamlessly integrate tool-calling into frameworks like OpenAI Agents, Vercel AI, LangChain, etc.
+Refine tool interactions with input/output processing for greater reliability.
+You get to connect your AI agents faster without wrestling with individual API integrations and managing their authentication or converting them into LLM tool calls.
+
+We also optimise the tool calls for you for maximum accuracy, free of cost! 😉
+
+Getting started
+The fastest way to give your agent tools is with Composio — often with zero setup needed on your part. Just:
+
+Install the core SDK (and a framework helper if needed):
+
+
+Python
+
+TypeScript
+
+pip install composio_core composio_openai # Example for OpenAI
+Login and get your API key:
+
+composio login
+
+(Ensure COMPOSIO_API_KEY is set as an environment variable)
+
+Connect your first app (e.g., GitHub):
+
+composio add github
+
+…and you’re ready to integrate tools. Here’s what you can do next:
+
+Head to the quickstart guide to learn more.
+Browse our tools to see what you can integrate with.
+Framework Integrations
+Here are some popular frameworks that Composio supports:
+
+OpenAI
+Add 250+ tools to your Assistants API with automatic authentication handling and real-time function execution.
+
+Vercel AI SDK
+Turn your Vercel AI SDK agents into powerful workflows that interact with external services without managing API connections.
+
+LangChain
+Turn your LangChain agents into powerful workflows that interact with external services without managing API connections.
+
+CrewAI
+Build specialized CrewAI agent teams that collaborate using external tools and data sources to accomplish complex tasks.
+
+All Frameworks
+Check out all the frameworks.

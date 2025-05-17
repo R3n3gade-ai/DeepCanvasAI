@@ -1,0 +1,180 @@
+Introduction
+
+
+Copy page
+
+Securely connect your AI agents to user accounts on external apps
+
+AI agents often need to perform actions on behalf of users like;
+
+sending an email from their Gmail
+creating an issue in their Jira
+or posting to their Slack
+Doing this securely requires handling complex authentication flows like OAuth 2.0, managing API keys, storing sensitive tokens, and refreshing credentials. This distracts from building the core agent logic.
+
+Let’s see how Composio Auth works in a basic example where we connect a user to their GitHub account.
+
+Quickstart with Composio Auth
+1. Identify the User (Entity) & App
+
+Composio lets you specify a unique entity_id for each user in your application. This is the user’s identifier in your application.
+
+
+Python
+
+TypeScript
+
+# User identifier from your application
+user_id_in_my_app = "user-alice-456"    # Can be UUID from DB
+app_to_connect = "github" # The app key
+2. Initiate the Connection
+
+You’ll need the integration_id for the app (which you typically set up once - see Integrations) and the entity_id you specified for your user.
+
+
+Python
+
+TypeScript
+
+from composio_openai import ComposioToolSet, Action # Or framework-specific ToolSet
+toolset = ComposioToolSet()
+entity = toolset.get_entity(id=user_id_in_my_app) # Get Entity object
+print(f"Initiating GitHub connection for entity: {entity.id}")
+# Initiate connection using the app's Integration and the user's Entity ID
+connection_request = entity.initiate_connection(app_name=app_to_connect)
+# Composio returns a redirect URL for OAuth flows
+if connection_request.redirectUrl:
+    print(f"Please direct the user to visit: {connection_request.redirectUrl}")
+3. Wait for Connection Activation (OAuth)
+
+For OAuth flows, the user needs to visit the redirectUrl and authorize the connection. Your application can wait for the connection to become active.
+
+
+Python
+
+TypeScript
+
+# Wait for the user to complete the OAuth flow in their browser
+print("Waiting for connection to become active...")
+try:
+    # This polls until the connection status is ACTIVE or timeout occurs
+    active_connection = connection_request.wait_until_active(
+        client=toolset.client, # Pass the underlying client
+        timeout=120 # Wait for up to 2 minutes
+    )
+    print(f"Connection successful! ID: {active_connection.id}")
+    # Store active_connection.id associated with user_id_in_my_app
+except Exception as e:
+    print(f"Connection timed out or failed: {e}")
+4. Execute Actions Using the Connection
+
+Once the connection is active, you (or realistically, an agent) can execute actions for that app on behalf of that specific user by providing their entity_id
+
+
+Python
+
+TypeScript
+
+# Execute using the user's entity_id (Composio finds the right connection)
+print(f"\nFetching GitHub username for entity: {user_id_in_my_app}")
+user_info = toolset.execute_action(
+    action=Action.GITHUB_GET_THE_AUTHENTICATED_USER,
+    params={},
+    entity_id=user_id_in_my_app # Specify the user context
+)
+if user_info.get("successful"):
+    print("GitHub username:", user_info.get("data", {}).get("login"))
+else:
+    print("Failed to fetch user:", user_info.get("error"))
+Alternatively, you can execute actions directly using the connection ID if you have it:
+
+
+Python
+
+TypeScript
+
+user_info_direct = toolset.execute_action(
+    action=Action.GITHUB_GET_THE_AUTHENTICATED_USER,
+    params={},
+    connected_account_id=active_connection.id
+)
+This flow demonstrates how Composio uses Integrations (app config), Entities (your users), and Connections (the secure link between them) to simplify authenticated interactions for your AI agents.
+
+Composio Auth Concepts Diagram
+
+Full Runnable Example Code
+
+# filename: connect_and_fetch_github.py
+from composio_openai import ComposioToolSet, Action, App
+from dotenv import load_dotenv
+import os
+import sys
+import time
+# Load environment variables from .env file
+# Ensure COMPOSIO_API_KEY is set
+load_dotenv()
+def run_auth_flow():
+    # --- 1. Identify User & App ---
+    user_id_in_my_app = "user-quickstart-py-example" # Example user ID
+    app_to_connect = App.GITHUB # Use Enum for clarity
+    print(f"--- Starting GitHub connection for Entity: {user_id_in_my_app} ---")
+    toolset = ComposioToolSet()
+    entity = toolset.get_entity(id=user_id_in_my_app)
+    active_connection = None # Initialize variable
+    try:
+        # --- 2. Initiate Connection ---
+        print(f"Initiating {app_to_connect.value} connection...")
+        # Use app_name; SDK finds appropriate integration
+        connection_request = entity.initiate_connection(app_name=app_to_connect)
+        # --- 3. Handle Redirect & Wait for Activation (OAuth) ---
+        if connection_request.redirectUrl:
+            print("\n!!! ACTION REQUIRED !!!")
+            print(f"Please visit this URL to authorize the connection:\n{connection_request.redirectUrl}\n")
+            print("Waiting for connection to become active (up to 120 seconds)...")
+            try:
+                # Poll Composio until the connection is marked active
+                active_connection = connection_request.wait_until_active(
+                    client=toolset.client, # Pass the underlying client
+                    timeout=120
+                )
+                print(f"\nConnection successful! ID: {active_connection.id}")
+                # In a real app, you'd store active_connection.id linked to user_id_in_my_app
+            except Exception as e:
+                print(f"Error waiting for connection: {e}", file=sys.stderr)
+                print("Please ensure you visited the URL and approved the connection.")
+                return # Exit if connection failed
+        else:
+            # Handle non-OAuth flows if needed (e.g., API Key where connection is instant)
+            print("Connection established (non-OAuth flow). Fetching details...")
+            # Fetch the connection details using the ID from the request
+            active_connection = toolset.client.connected_accounts.get(connection_id=connection_request.connectedAccountId)
+            if active_connection.status != "ACTIVE":
+                 print(f"Connection is not active (Status: {active_connection.status}). Exiting.", file=sys.stderr)
+                 return
+        # --- 4. Execute Action ---
+        if active_connection and active_connection.status == "ACTIVE":
+            print(f"\nExecuting action using connection ID: {active_connection.id}")
+            print(f"Fetching GitHub username for entity: {user_id_in_my_app}...")
+            user_info = toolset.execute_action(
+                action=Action.GITHUB_GET_THE_AUTHENTICATED_USER,
+                params={},
+                # Provide context via entity_id (recommended)
+                entity_id=user_id_in_my_app
+                # OR precisely target the connection (if ID was stored)
+                # connected_account_id=active_connection.id
+            )
+            print("\n--- Execution Result ---")
+            if user_info.get("successful"):
+                username = user_info.get("data", {}).get("login", "N/A")
+                print(f"Successfully fetched GitHub username: {username}")
+            else:
+                print(f"Failed to fetch user info: {user_info.get('error', 'Unknown error')}")
+            # import json
+            # print("\nFull response:")
+            # print(json.dumps(user_info, indent=2))
+        else:
+             print("\nSkipping action execution as connection is not active.")
+    except Exception as e:
+        print(f"\nAn unexpected error occurred: {e}", file=sys.stderr)
+if __name__ == "__main__":
+    run_auth_flow()
